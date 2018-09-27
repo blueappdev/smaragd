@@ -209,7 +209,7 @@ class CompareFrame(tk.Frame):
         return ("Arial", 9)
         
     def initializeCompareMode(self):
-        self.compareMode = tk.StringVar(name = "compareMode")
+        self.compareMode = tk.StringVar()
         self.compareMode.set("words")
         self.compareMode.trace("w", self.compareModeChanged)
         

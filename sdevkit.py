@@ -91,9 +91,7 @@ class LauncherFrame(ui.ApplicationFrame):
         print 'onBrowsePackages'
         self.loadImages()
 
-
     def onBrowseClasses(self):
-        print 'onBrowseClasses'
         self.loadImages()
         reload(slib.classFinder)
         self.openTopLevelFrame(slib.classFinder.ClassFinderFrame)

@@ -6,9 +6,10 @@
 
 import Tkinter as tk
 import tkFont
+from Kernel import *
 import Configuration
 
-class ApplicationFrame(tk.Frame):
+class ApplicationFrame(tk.Frame, Object):
     def __init__(self, master, parentApplication=None):
         tk.Frame.__init__(self, master = master)
         self.parentApplication = parentApplication
