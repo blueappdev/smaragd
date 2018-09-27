@@ -97,13 +97,14 @@ class ClassFinderFrame(ui.ApplicationFrame):
         self.buttonOK.pack(side=tk.RIGHT, pady=5, padx=5)
         self.buttonsFrame.pack(side=tk.BOTTOM, fill=tk.X)
 
-    def classNameChanged(self, *args):
+    def classNameChanged(self, *unused):
         self.updateListbox(pattern = self.methodNameVar.get())
 
     def getAllClassWrappers(self):
         wrappers = []
         for each in self.parentApplication.getAllClasses():
             wrappers.append(ClassWrapper(each))
+        wrappers.sort(key=lambda each: each.value.getUnqualifiedName())
         return wrappers
 
     def initializeWrappers(self):
@@ -124,13 +125,12 @@ class ClassFinderFrame(ui.ApplicationFrame):
                 return each.value
         self.error("selection not found")
 
-    def onDoubleClick(self, anEvent):
+    def onDoubleClick(self, event):
         self.onOK()
 
     def onOK(self):
         selectedString =  self.listbox.get(self.listbox.curselection())
         selectedClass = self.findClassForSelectedString(selectedString)
-        #newWindow = tk.Toplevel(self.master)
         newWindow = tk.Toplevel(self.parentApplication.master)
         newWindow.title(selectedClass.name)
         reload(classBrowser)

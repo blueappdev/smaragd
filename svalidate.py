@@ -51,7 +51,6 @@ class Validator:
     def validateMethod(self, aMethod):
         pass
 
-
 if __name__ == "__main__":
     options, arguments = getopt.getopt(sys.argv[1:], "")
     for option, value in options:
