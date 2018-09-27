@@ -74,7 +74,7 @@ class BetterListbox(tk.Frame):
 
 class BetterText(tk.Frame):
     def __init__(self, master):
-        tk.Frame.__init__(self, master, bg="green")
+        tk.Frame.__init__(self, master)
         self.realWidget = tk.Text(
                 self,
                 font=Configuration.globalConfiguration.getFont(),

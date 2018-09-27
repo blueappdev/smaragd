@@ -262,7 +262,7 @@ class VWPackageLoader(PackageLoader):
             if strippedChunk == "":
                 self.mode = "code"
                 return
-            self.addInstanceMethod(self.targetClassName, Fragment(self.chunk.strip()))
+            self.addMethod(self.targetClassName, Fragment(self.chunk.strip()))
             return
         self.error("unexpected mode ", self.mode)
 
@@ -445,9 +445,17 @@ class Scanner(Object):
         token = self.getBasicToken()
         while not token.matches("end"):
             tokens.append(token)
-            token = self.getToken()
+            token = self.getBasicToken()
         if includeEndToken:
             tokens.append(token)
+        return tokens
+
+    def allTokens(self):
+        tokens = []
+        token = self.getToken()
+        while not token.matches("end"):
+            tokens.append(token)
+            token = self.getToken()
         return tokens
 
     def scanEnd(self):
@@ -1262,6 +1270,12 @@ class BasicClass(Object):
         self.instVars = []
         self.methodsDictionary = {}
 
+    def getUnqualifiedName(self):
+        return self.name.split(".")[-1]
+
+    def getNamespace(self):
+        return string.join(self.name.split(".")[:-1], ".")
+
     def setInstVars(self, someStrings):
         #print "Set instVars", someStrings
         assert self.instVars == []
@@ -1336,6 +1350,18 @@ class Class(BasicClass):
         stream.write("\tclassVarNames: ")
         stream.write(self.classVars)
         stream.write("\n")
+        return stream.getvalue()
+
+    def getBrowserDescription(self):
+        stream = StringIO.StringIO()
+        stream.write(self.getUnqualifiedName())
+        stream.write(" (")
+        stream.write(self.image.getShortImageName())
+        namespace = self.getNamespace()
+        if namespace != "":
+            stream.write(":")
+            stream.write(namespace)
+        stream.write(")")
         return stream.getvalue()
 
 class MetaClass(BasicClass):
@@ -1775,7 +1801,7 @@ class Image(Object):
         newClass = self.classes.get(className, None)
         if newClass is None:
             newClass = Class(className)
-            self.classes[aString] = newClass
+            self.classes[className] = newClass
             newClass.image = self
             newClass.metaClass.image = self
         if len(parts) == 1:
@@ -1792,6 +1818,7 @@ class Image(Object):
         return package
 
     def addCompiledMethod(self, aCompiledMethod):
+        #print "methodClass", aCompiledMethod.methodClass
         methodClass = aCompiledMethod.methodClass
         methodSelector = aCompiledMethod.selector
         if methodClass.methodsDictionary.has_key(methodSelector):
@@ -1826,7 +1853,6 @@ class Image(Object):
             result += len(each.methodsDictionary)
             result += len(each.metaClass.methodsDictionary)
         return result
-        
 
     def cache(self, recompile):
         assert self.filename is not None
@@ -1837,6 +1863,9 @@ class Image(Object):
         print newFilename
         if Configuration.sessionConfiguration.verboseFlag:
             self.printStatistics()
+
+    def getShortImageName(self):
+        return (self.imageName.split("."))[0]
 
 
 

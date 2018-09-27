@@ -14,7 +14,7 @@ class ClassWrapper:
         self.value = aClass
 
     def __repr__(self):
-        return self.value.name + " (" + self.value.image.imageName + ")"
+        return self.value.getBrowserDescription()
 
 class ClassFinderFrame(ui.ApplicationFrame):
     def __init__(self, master, parentApplication):
@@ -115,7 +115,7 @@ class ClassFinderFrame(ui.ApplicationFrame):
     def updateListbox(self, pattern):
         self.listbox.delete(0, tk.END)
         for each in self.wrappers:
-            if fnmatch.fnmatch(each.value.name, pattern + "*"):
+            if fnmatch.fnmatch(each.value.getUnqualifiedName(), pattern + "*"):
                 self.listbox.insert(tk.END, each)
 
     def findClassForSelectedString(self, aString):

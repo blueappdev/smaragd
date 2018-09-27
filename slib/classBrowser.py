@@ -14,7 +14,7 @@ class ClassBrowser(ui.ApplicationFrame):
         ui.ApplicationFrame.__init__(self, master = master, parentApplication = parentApplication)
         self.domain = domain
         self.initializeSide()
-        self.master.title("[CB] " + self.domain.name)
+        self.master.title("[CB] " + self.domain.getBrowserDescription())
         self.master.protocol("WM_DELETE_WINDOW", self.master.destroy)
         self.pack(fill=tk.BOTH, expand=1)
         self.panedWindow = tk.PanedWindow(self, orient=tk.VERTICAL,  sashpad=4, sashrelief=tk.RAISED)
