@@ -10,6 +10,7 @@ import json
 import Tkinter as tk
 from collections import OrderedDict
 import slib.UI as ui
+import Configuration
 
 class CompareComponentFrame(tk.Frame):
     def addToolbarButton(self, toolbar, text, command):
@@ -54,6 +55,7 @@ class CompareFrame(tk.Frame):
         self.navigationList = []
         self.navigationIndex = None
         tk.Frame.__init__(self, master = master)
+        master.compareFrame = self
         self.master.title("Compare Tool")
         self.master.protocol("WM_DELETE_WINDOW", self.master.destroy)
 
@@ -206,7 +208,7 @@ class CompareFrame(tk.Frame):
         self.rightHorizontalScrollbar.config(command = self.xview)
         
     def textFont(self):
-        return ("Arial", 9)
+        return ("Tahoma", 7)
         
     def initializeCompareMode(self):
         self.compareMode = tk.StringVar()

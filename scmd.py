@@ -550,7 +550,7 @@ class Scanner(Object):
             self.stepCharacter()
             if self.currentCharacterClass == "end":
                 self.error("missing character after dollar")
-            token = self.newToken("character", self.currentCharacter)
+            token = self.newToken("character", self.currentCharacter, self.lineNumber)
             self.stepCharacter()
             return token
         else:

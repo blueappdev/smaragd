@@ -9,10 +9,17 @@ import tkFont
 from Kernel import *
 import Configuration
 
-class ApplicationFrame(tk.Frame, Object):
+class BasicFrame(tk.Frame, Object):
     def __init__(self, master, parentApplication=None):
         tk.Frame.__init__(self, master = master)
         self.parentApplication = parentApplication
+
+    def getFont(self):
+        return Configuration.globalConfiguration.getFont()
+
+class ApplicationFrame(BasicFrame):
+    def __init__(self, master, parentApplication=None):
+        BasicFrame.__init__(self, master = master, parentApplication=parentApplication)
         self.master.protocol("WM_DELETE_WINDOW", self.quit)
         self.installMenubar()
 
@@ -36,19 +43,17 @@ class ApplicationFrame(tk.Frame, Object):
         newWindow = tk.Toplevel(self.master)
         newFrame = aFrameClass(newWindow, self)
 
-    def getFont(self):
-        return Configuration.globalConfiguration.getFont()
-
-class BetterListbox(tk.Frame):
+class BetterListbox(BasicFrame):
     def __init__(self, master):
-        tk.Frame.__init__(self, master)
+        BasicFrame.__init__(self, master)
         self.displayStringFunction = None
         self.displayColorFunction = None
         self.values = []
         self.__listbox = tk.Listbox(
                 self,
                 selectmode=tk.EXTENDED,
-                activestyle=tk.DOTBOX)
+                activestyle=tk.DOTBOX,
+                font=self.getFont())
         self.__listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         scroll = tk.Scrollbar(self, command=self.__listbox.yview)
         self.__listbox.configure(yscrollcommand = scroll.set)

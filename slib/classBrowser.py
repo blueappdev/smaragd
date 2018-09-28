@@ -8,6 +8,7 @@ import Tkinter as tk
 from Kernel import *
 import UI as ui
 import Configuration
+from compareTool import CompareWindow
 
 class ClassBrowser(ui.ApplicationFrame):
     def __init__(self, master, parentApplication, domain):
@@ -68,11 +69,34 @@ class ClassBrowser(ui.ApplicationFrame):
         self.methodsListbox.displayColorFunction = lambda m: self.displayColorForMethod(m)
         self.methodsListbox.bind("<<ListboxSelect>>", self.methodsSelectionChanged)
         self.topWindow.add(self.methodsListbox)
+        self.popup_menu = tk.Menu(self.methodsListbox, tearoff=0)
+        self.popup_menu.add_command(
+                label="Compare with shadow method",
+                command=self.onCompareWithShadowMethod)
+        self.methodsListbox.bind("<Button-3>", self.popup)
+        self.bind("<Button-2>", self.popup) #Aqua
+
+    def popup(self, event):
+        try:
+            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.popup_menu.grab_release()
+
+    def onCompareWithShadowMethod(self):
+        method = self.methodsListbox.getSelectedItems()[0]
+        compareTool = CompareWindow(self.master)
+        compareFrame = compareTool.compareFrame
+        compareFrame.leftFrame.setText(method.source)
+        compareFrame.rightFrame.setText(self.getShadowMethod(method).source)
+        compareFrame.updateResults()
+
+    def getShadowMethod(self, aMethod):
+        if self.shadowClass is None:
+            return None
+        return self.shadowClass.methodsDictionary.get(aMethod.selector, None)
 
     def compareMethod(self, aMethod):
-        if self.shadowClass is None:
-            return "missing"
-        shadowMethod = self.shadowClass.methodsDictionary.get(aMethod.selector, None)
+        shadowMethod = self.getShadowMethod(aMethod)
         if shadowMethod is None:
             return "missing"
         if aMethod.source == shadowMethod.source:
