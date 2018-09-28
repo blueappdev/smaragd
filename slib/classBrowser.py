@@ -2,12 +2,8 @@
 #
 # requires python 2.7
 
-import os, sys
-import string, fnmatch
 import Tkinter as tk
-from Kernel import *
 import UI as ui
-import Configuration
 from compareTool import CompareWindow
 
 class ClassBrowser(ui.ApplicationFrame):
@@ -76,18 +72,16 @@ class ClassBrowser(ui.ApplicationFrame):
         self.methodsListbox.displayColorFunction = lambda m: self.displayColorForMethod(m)
         self.methodsListbox.bind("<<ListboxSelect>>", self.methodsSelectionChanged)
         self.topWindow.add(self.methodsListbox)
-        self.popup_menu = tk.Menu(self.methodsListbox, tearoff=0)
-        self.popup_menu.add_command(
-                label="Compare with shadow method",
-                command=self.onCompareWithShadowMethod)
+        self.popupMenu = tk.Menu(self.methodsListbox, tearoff=0)
+        self.addMenuItem(self.popupMenu, "Compare with shadow method", self.onCompareWithShadowMethod)
         self.methodsListbox.bind("<Button-3>", self.popup)
         self.bind("<Button-2>", self.popup) #Aqua
 
     def popup(self, event):
         try:
-            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+            self.popupMenu.tk_popup(event.x_root, event.y_root, 0)
         finally:
-            self.popup_menu.grab_release()
+            self.popupMenu.grab_release()
 
     def onCompareWithShadowMethod(self):
         method = self.methodsListbox.getSelectedItems()[0]

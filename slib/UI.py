@@ -32,12 +32,17 @@ class ApplicationFrame(BasicFrame):
         pass
 
     def addMenu(self, parentMenu, label):
-        newMenu = tk.Menu(parentMenu, tearoff=0)
-        parentMenu.add_cascade(label = label, menu = newMenu)
+        newMenu = tk.Menu(parentMenu, tearoff=0, font = self.getFont())
+        parentMenu.add_cascade(
+                label = label,
+                menu = newMenu)
         return newMenu
 
     def addMenuItem(self, menu, label, command):
-        menu.add_command(label = label, command = command)
+        newMenuItem = menu.add_command(
+                label = label,
+                command = command,
+                font=self.getFont())
 
     def openTopLevelFrame(self, aFrameClass):
         newWindow = tk.Toplevel(self.master)
