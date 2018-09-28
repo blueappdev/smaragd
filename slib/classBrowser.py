@@ -25,6 +25,13 @@ class ClassBrowser(ui.ApplicationFrame):
         self.buildBottomFrame()
         self.updateMethodProtocols()
 
+    def buildMenubar(self, menubar):
+        self.buildClassMenu(menubar)
+
+    def buildClassMenu(self, parentMenu):
+        newMenu = self.addMenu(parentMenu, "Class")
+        self.addMenuItem(newMenu, "Compare with shadow class", self.onCompareWithShadowClass)
+
     def initializeSide(self):
         if self.domain.getAllMethods() == [] and self.domain.metaClass.getAllMethods() != []:
             newSide = "class"
@@ -109,11 +116,11 @@ class ClassBrowser(ui.ApplicationFrame):
     def displayColorForMethod(self, aMethod):
         result = self.compareMethod(aMethod)
         if result == "equal":
-            return "darkgreen"
+            return "#006F00"
         if result == "different":
-            return "blue"
+            return "#0000FF"
         if result == "sameEffect":
-            return "#7F7F00"   # olive
+            return "#7F6F00"
         return None
 
     def findShadowClass(self, aClass):
@@ -181,6 +188,9 @@ class ClassBrowser(ui.ApplicationFrame):
         else:
             #print repr(selectedItems[0].source)
             self.editor.setText(selectedItems[0].source)
+
+    def onCompareWithShadowClass(self):
+        print "Compare with shadow class", self.domain.name
 
 
 

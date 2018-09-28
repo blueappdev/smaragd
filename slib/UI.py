@@ -71,11 +71,13 @@ class BetterListbox(BasicFrame):
             representation = self.displayStringFunction(anObject)
         self.__listbox.insert(tk.END, representation)
         self.values.append(anObject)
+        assert self.__listbox.size() == len(self.values)
         if self.displayColorFunction is not None:
             color = self.displayColorFunction(anObject)
             self.__listbox.itemconfig(len(self.values)-1, foreground=color)
 
     def getSelectedItems(self):
+        assert self.__listbox.size() == len(self.values)
         return [self.values[int(i)] for i in self.__listbox.curselection()]
 
     def bind(self, eventName, callback):

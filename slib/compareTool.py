@@ -42,9 +42,6 @@ class CompareComponentFrame(tk.Frame):
         prettyJson = json.dumps(rawJson, indent = 2)
         self.setText(prettyJson)
 
-        print "json"
-
-
 class CompareFrame(tk.Frame):
     def __init__(self, master):
         self.initializeCompareMode()
@@ -114,22 +111,26 @@ class CompareFrame(tk.Frame):
                 variable = self.wrapMode, 
                 onvalue = tk.WORD,
                 offvalue = tk.NONE).pack(side=tk.LEFT)
-        self.buttonFirstDiff=tk.Button(self.buttonFrame, 
+        self.buttonFirstDiff=tk.Button(
+                self.buttonFrame,
                 text="First",
                 state=tk.DISABLED,
                 command=self.navigateToFirstDiff)
         self.buttonFirstDiff.pack(side=tk.LEFT, padx=2, pady=2)
-        self.buttonPreviousDiff=tk.Button(self.buttonFrame, 
+        self.buttonPreviousDiff=tk.Button(
+                self.buttonFrame,
                 text="Previous",
                 state=tk.DISABLED,
                 command=self.navigateToPreviousDiff)
         self.buttonPreviousDiff.pack(side=tk.LEFT, padx=2, pady=2)
-        self.buttonNextDiff=tk.Button(self.buttonFrame, 
+        self.buttonNextDiff=tk.Button(
+                self.buttonFrame,
                 text="Next",
                 state=tk.DISABLED,
                 command=self.navigateToNextDiff)
         self.buttonNextDiff.pack(side=tk.LEFT, padx=2, pady=2)
-        self.buttonLastDiff=tk.Button(self.buttonFrame,
+        self.buttonLastDiff=tk.Button(
+                self.buttonFrame,
                 text="Last",
                 state=tk.DISABLED,
                 command=self.navigateToLastDiff)
