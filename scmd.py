@@ -218,8 +218,16 @@ class VWPackageLoader(PackageLoader):
         self.stream.close()
         return self.targetPackage
 
+    def readBasicCharacter(self):
+        ch = self.stream.read(1)
+        if ch == "\r":
+            ch = self.stream.read(1)
+            assert ch == "\n", "linefeed expected after carriage return"
+        return ch
+
     def stepCharacter(self):
-        self.currentCharacter = self.stream.read(1)
+        self.currentCharacter = self.readBasicCharacter()
+        self.currentCharacter
 
     def beginChunk(self):
         self.chunkStream = StringIO.StringIO()
@@ -356,6 +364,10 @@ class Scanner(Object):
         # D800 - DBFF and DC00 - DFFF
         #(H - 0xD800) * 0x400) + (L - 0xDC00) + 0x10000;
         ch = self.stream.read(1)
+        # Ignore carriage returns.
+        if ch == "\r":
+            ch = self.stream.read(1)
+            assert ch == "\n", "linefeed expected after carriage return"
         if len(ch) != 1:
             return ch
         if 0xD800 <= ord(ch) <= 0xDBFF:
@@ -1269,7 +1281,9 @@ class GSParser(Parser):
         if self.currentToken.matches("bytearray"):
             self.step()
             node = self.parsePrimitiveObject()
-            isArrayBuilder = self.matches("binary_selector", ",") or not node.isLiteralValueNode()
+            isArrayBuilder = (self.matches("binary_selector", ",") or
+                              (node is not None and not node.isLiteralValueNode()))
+
             if isArrayBuilder:
                 newNode = ArrayNode()
                 newNode.addStatement(node)
@@ -1914,6 +1928,7 @@ class Image(Object):
 
     def addCompiledMethod(self, aCompiledMethod):
         #print "methodClass", aCompiledMethod.methodClass
+        assert "\r" not in aCompiledMethod.source, "unexpected carriage return"
         methodClass = aCompiledMethod.methodClass
         methodSelector = aCompiledMethod.selector
         if methodClass.methodsDictionary.has_key(methodSelector):
@@ -2004,15 +2019,13 @@ class ImageBuilder(Object):
         self.newPackageLoader(aFilename, type).load()
 
 if __name__ == "__main__":
-    options, arguments = getopt.getopt(sys.argv[1:], "vcr")
+    options, arguments = getopt.getopt(sys.argv[1:], "vc")
     action = None
     for option, value in options:
         if option == "-v":
             Configuration.sessionConfiguration.verboseFlag = True
         elif option == "-c":
             action = "cache"
-        elif option == "-r":
-            action = "recache"
         else:
             print "Option", option, "not supported."
     if len(arguments) == 0:
@@ -2023,9 +2036,7 @@ if __name__ == "__main__":
     image.loadFile(filename)
     image.filename = filename
     if action == "cache":
-        image.cache(False)
-    elif action == "recache":
-        image.cache(True)
+        image.cache()
     else:
         image.printStatistics()
 

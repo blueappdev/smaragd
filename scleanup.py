@@ -7,6 +7,7 @@ from scmd import *
 class Cleaner(Object):
     def __init__(self, aFilename):
         self.filename = aFilename
+        self.namespacesToIgnore = self.loadNamespaces()
 
     def loadImage(self):
         root, extension = os.path.splitext(self.filename)
@@ -33,11 +34,7 @@ class Cleaner(Object):
             aClass.remove()
 
     def shouldDeleteClass(self, aClass):
-        namespacesToCleanup = [
-                "UI", "UISkinsOSX", "Refactory.Browser", "Store",
-                "Tools.Trippy", "Tools.FileTools", "Graphics",
-                "Root.GemStone.Globals", "Root.GemStone.Tests"]
-        return aClass.getNamespace() in namespacesToCleanup
+        return aClass.getNamespace() in self.namespacesToIgnore
 
     def printStatistics(self, aString):
         print aString
@@ -48,6 +45,19 @@ class Cleaner(Object):
         namespaces = map(lambda each: each.getNamespace(), self.image.classes.itervalues())
         for each in set(namespaces):
             print "    ", each
+
+    def loadNamespaces(self):
+        namespaces = []
+        stream = Filename("config/namespacesToIgnore.txt").readStream()
+        line = stream.readline()
+        while line != "":
+            line = line.strip()
+            if line == "" or line[0] == "#":
+                continue
+            namespaces.append(line)
+            line = stream.readline()
+        stream.close()
+        return namespaces
 
 if __name__ == "__main__":
     options, arguments = getopt.getopt(sys.argv[1:], "s")

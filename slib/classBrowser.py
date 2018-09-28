@@ -89,7 +89,7 @@ class ClassBrowser(ui.ApplicationFrame):
         if result == "different":
             return "blue"
         if result == "sameEffect":
-            return "#FF0000"
+            return "#7F7F00"   # olive
         return None
 
     def findShadowClass(self, aClass):
@@ -155,6 +155,7 @@ class ClassBrowser(ui.ApplicationFrame):
         if selectedItems == []:
             self.editor.setText(self.domain.getClassDefinition())
         else:
+            #print repr(selectedItems[0].source)
             self.editor.setText(selectedItems[0].source)
 
 

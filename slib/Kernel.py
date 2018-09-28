@@ -87,4 +87,13 @@ class Array(SequenceableCollection):
     def __repr__(self):
         return
 
+class Filename:
+    def __init__(self, aString):
+        self.filename = aString
+
+    def readStream(self):
+        return codecs.open(self.filename, encoding="UTF-8")
+
+    def writeStream(self):
+        return codecs.open(self.filename, "w", encoding="UTF-8")
 
