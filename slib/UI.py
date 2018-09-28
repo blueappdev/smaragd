@@ -43,6 +43,7 @@ class BetterListbox(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
         self.displayStringFunction = None
+        self.displayColorFunction = None
         self.values = []
         self.__listbox = tk.Listbox(
                 self,
@@ -65,6 +66,9 @@ class BetterListbox(tk.Frame):
             representation = self.displayStringFunction(anObject)
         self.__listbox.insert(tk.END, representation)
         self.values.append(anObject)
+        if self.displayColorFunction is not None:
+            color = self.displayColorFunction(anObject)
+            self.__listbox.itemconfig(len(self.values)-1, foreground=color)
 
     def getSelectedItems(self):
         return [self.values[int(i)] for i in self.__listbox.curselection()]

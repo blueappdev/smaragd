@@ -8,7 +8,6 @@ import os, sys
 import string, StringIO
 import getopt
 import Tkinter as tk
-import pickle as pp
 
 from scmd import *
 import slib
@@ -104,10 +103,9 @@ class LauncherFrame(ui.ApplicationFrame):
     def loadCachedImage(self, aFilename):
         print "Load", aFilename
         stream = open(aFilename, "rb")
-        image = pp.load(stream)
+        image = pickle.load(stream)
         stream.close()
         image.imageName = os.path.basename(aFilename)
-        print image.imageName
         return image
         
     def loadImages(self): 

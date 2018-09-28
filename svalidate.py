@@ -21,7 +21,6 @@ class Validator:
             self.error(aFilename, "file not found")
             sys.exit(1)
 
-
     def processDirectory(self, aFilename):
         for each in os.listdir(aFilename):
             self.process(os.path.join(aFilename, each))

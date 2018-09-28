@@ -57,14 +57,14 @@ class ScannerTest(Testing.TestCase):
             ("identifier", 'a'),
             ")")
 
-    def testArrayLiteral(self):
+    """def testArrayLiteral(self):
         self.scan("#[0 100 255]", 
             ("bytearray", "#["),
             ("number", "0"),
             ("number", "100"),
             ("number", "255"),
             "]")
-
+    """
     def testMinus(self):
         self.scan("- 1", 
             ["binary_selector", "-"],
@@ -216,14 +216,6 @@ class ParserTest(Testing.TestCase):
         self.assertEqual(node.elements[2].value, String("string"))
         self.assertEqual(node.elements[3].value, Symbol("identifier"))
 
-    def testByteArray(self):
-        node = self.parseSimpleObject("#[0 100 255]")
-        self.assertTrue(node.isLiteralArrayNode())
-        self.assertTrue(node.isForByteArray)
-        self.assertEqual(node.elements[0].value, Number("0"))
-        self.assertEqual(node.elements[1].value, Number("100"))
-        self.assertEqual(node.elements[2].value, Number("255"))
-
     def testBlock(self):
         sequenceNode = self.parse("[:aa :bb | ala]")
         assert sequenceNode.isSequenceNode(), "sequence node expected"
@@ -279,12 +271,20 @@ class ParserTest(Testing.TestCase):
 
 class VWParserTest(ParserTest):
     def parserClass(self):
-        return Parser
+        return VWParser
 
     def testIdentifier(self):
         node = self.parseSingleStatement("Object")
         self.assertTrue(node.isVariableNode())
         self.assertTrue(node.name == "Object")
+
+    def testByteArray(self):
+        node = self.parseSimpleObject("#[0 100 255]")
+        self.assertTrue(node.isLiteralArrayNode())
+        self.assertTrue(node.isForByteArray)
+        self.assertEqual(node.elements[0].value, Number("0"))
+        self.assertEqual(node.elements[1].value, Number("100"))
+        self.assertEqual(node.elements[2].value, Number("255"))
 
     #def testQualified(self):
     #    node = self.parseSingleStatement("#{Core.Object}")
@@ -292,6 +292,36 @@ class VWParserTest(ParserTest):
     #    self.assertTrue(node.receiver.value == String("Hello"))
     #    self.assertTrue(node.selector == ",")
     #    self.assertTrue(node.arguments[0].value == String(' World'))
+
+class GSParserTest(ParserTest):
+    def parserClass(self):
+        return GSParser
+
+    def testCurlyArray(self):
+        node = self.parseSimpleObject("{0 . 100 . 255}")
+        self.assertTrue(node.isArrayNode())
+        self.assertEqual(node.elements[0].value, Number("0"))
+        self.assertEqual(node.elements[1].value, Number("100"))
+        self.assertEqual(node.elements[2].value, Number("255"))
+
+    # GS parser must support byte array #[ 1 2 3] and
+    # comma separated ArrayBuilder #[ expression , expression ]
+    def testByteArray(self):
+        node = self.parseSimpleObject("#[0 100 255]")
+        self.assertTrue(node.isLiteralArrayNode())
+        self.assertTrue(node.isForByteArray)
+        self.assertEqual(node.elements[0].value, Number("0"))
+        self.assertEqual(node.elements[1].value, Number("100"))
+        self.assertEqual(node.elements[2].value, Number("255"))
+
+    def testArrayBuilder(self):
+        node = self.parseSimpleObject("#[0, 100, 255]")
+        self.assertTrue(node.isArrayNode())
+        self.assertEqual(node.elements[0].value, Number("0"))
+        self.assertEqual(node.elements[1].value, Number("100"))
+        self.assertEqual(node.elements[2].value, Number("255"))
+
+
 
 
 if __name__ == '__main__':

@@ -13,6 +13,7 @@ class ClassBrowser(ui.ApplicationFrame):
     def __init__(self, master, parentApplication, domain):
         ui.ApplicationFrame.__init__(self, master = master, parentApplication = parentApplication)
         self.domain = domain
+        self.shadowClass = self.findShadowClass(self.domain)
         self.initializeSide()
         self.master.title("[CB] " + self.domain.getBrowserDescription())
         self.master.protocol("WM_DELETE_WINDOW", self.master.destroy)
@@ -64,8 +65,40 @@ class ClassBrowser(ui.ApplicationFrame):
     def buildMethodsFrame(self):
         self.methodsListbox = ui.BetterListbox(self.topWindow)
         self.methodsListbox.displayStringFunction = lambda m: m.selector
+        self.methodsListbox.displayColorFunction = lambda m: self.displayColorForMethod(m)
         self.methodsListbox.bind("<<ListboxSelect>>", self.methodsSelectionChanged)
         self.topWindow.add(self.methodsListbox)
+
+    def compareMethod(self, aMethod):
+        if self.shadowClass is None:
+            return "missing"
+        shadowMethod = self.shadowClass.methodsDictionary.get(aMethod.selector, None)
+        if shadowMethod is None:
+            return "missing"
+        if aMethod.source == shadowMethod.source:
+            return "equal"
+        # tokensAsString should be changed to bytecode comparision
+        if aMethod.tokensAsStrings() == shadowMethod.tokensAsStrings():
+            return "sameEffect"
+        return "different"
+
+    def displayColorForMethod(self, aMethod):
+        result = self.compareMethod(aMethod)
+        if result == "equal":
+            return "darkgreen"
+        if result == "different":
+            return "blue"
+        if result == "sameEffect":
+            return "#FF0000"
+        return None
+
+    def findShadowClass(self, aClass):
+        shadowImage = None
+        if aClass.image == self.parentApplication.image1:
+            shadowImage = self.parentApplication.image2
+        if aClass.image == self.parentApplication.image2:
+            shadowImage = self.parentApplication.image1
+        return shadowImage.findClassNamed(aClass.name, ignoreNamespaces = True)
 
     def buildBottomFrame(self):
         self.buildEditorFrame()

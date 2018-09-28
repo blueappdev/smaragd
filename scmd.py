@@ -235,7 +235,10 @@ class VWPackageLoader(PackageLoader):
                 self.mode = "category"
                 return
             # print strippedChunk
-            compiler = self.newCompiler()
+            if strippedChunk.startswith("Root.GemStone."):
+                compiler = GSCompiler()
+            else:
+                compiler = self.newCompiler()
             node = compiler.process(Fragment(self.chunk))
             #print node.evaluate(self)
             return
@@ -278,7 +281,7 @@ class VWPackageLoader(PackageLoader):
         #print "====================="
 
 class Token(Object):
-    def __init__(self, type, value, lineNumber = None):
+    def __init__(self, type, value, lineNumber):
         self.type = type
         self.value = value
         self.lineNumber = lineNumber
@@ -286,7 +289,7 @@ class Token(Object):
     def printOn(self, aStream):
         aStream.write(self.__class__.__name__ + "(" + self.type)
         if self.type != self.value and self.value != "":
-            aStream.write("," + self.value)
+            aStream.write(", " + self.value)
         aStream.write(")")
 
     def matches(self, aType, aValue=None):
@@ -337,7 +340,7 @@ class Scanner(Object):
         self.nextCharacter = self.readCharacter()
         self.stepCharacter()
 
-    def newToken(self, type, value, lineNumber = None):
+    def newToken(self, type, value, lineNumber):
         return Token(type, value, lineNumber)
 
     def ord(self, ch):
@@ -389,7 +392,7 @@ class Scanner(Object):
             return ch
         if ch in "+/\\*~<>=@%|&?!,`":
             return "special_character"
-        if 32 < self.ord(ch) > 127:
+        if not 32 <= self.ord(ch) <= 127:
             return "exotic_character"
         self.error("unclassified character", ch, repr(self.ord(ch)))
 
@@ -458,6 +461,9 @@ class Scanner(Object):
             token = self.getToken()
         return tokens
 
+    def allTokenValues(self):
+        return map(lambda each: each.value, self.allTokens())
+
     def scanEnd(self):
         if self.currentCharacter == "":
             return self.newToken("end", "", self.lineNumber)
@@ -481,7 +487,7 @@ class Scanner(Object):
             return token
         if self.currentCharacter == ":" and self.nextCharacter != "=":
             self.stepCharacter()
-            return self.newToken("keyword", token.value + ":")
+            return self.newToken("keyword", token.value + ":", self.lineNumber)
         else:
             return token
 
@@ -506,7 +512,7 @@ class Scanner(Object):
         while self.currentCharacterClass == "digit":
              value.write(self.currentCharacter)
              self.stepCharacter()
-        return self.newToken("number", value.getvalue())
+        return self.newToken("number", value.getvalue(), self.lineNumber)
 
     def scanString(self):
         if self.currentCharacter == "'":
@@ -523,7 +529,7 @@ class Scanner(Object):
                 value.write(self.currentCharacter)
                 self.stepCharacter()
             self.stepCharacter()
-            return self.newToken("string",value.getvalue())
+            return self.newToken("string",value.getvalue(), self.lineNumber)
         else:
             return None
 
@@ -544,10 +550,10 @@ class Scanner(Object):
             self.scanWhite()
             if self.currentCharacter == "(":
                 self.stepCharacter()
-                return self.newToken("array", "#(")
+                return self.newToken("array", "#(", self.lineNumber)
             if self.currentCharacter == "[":
                 self.stepCharacter()
-                return self.newToken("bytearray", "#[")
+                return self.newToken("bytearray", "#[", self.lineNumber)
             if self.currentCharacter == "{":
                 self.stepCharacter()
                 self.scanWhite()
@@ -557,7 +563,7 @@ class Scanner(Object):
                 if self.currentCharacter != "}":
                     self.error("incomplete qualified reference literal")
                 self.stepCharacter()
-                return self.newToken("qualified_name", identifier.value)
+                return self.newToken("qualified_name", identifier.value, self.lineNumber)
             if self.currentCharacterClass == "letter":
                 value = StringIO.StringIO()
                 value.write(self.currentCharacter)
@@ -565,15 +571,15 @@ class Scanner(Object):
                 while self.currentCharacterClass in ["letter", "digit", ":"]:
                     value.write(self.currentCharacter)
                     self.stepCharacter()
-                return self.newToken("symbol", value.getvalue())
+                return self.newToken("symbol", value.getvalue(), self.lineNumber)
             if self.currentCharacter == "'":
                 token = self.scanString()
                 if token is not None:
-                    return self.newToken("symbol", token.value)
+                    return self.newToken("symbol", token.value, self.lineNumber)
             token = self.scanBinarySelector()
             if token is None:
                 self.error("incomplete literal after hash")
-            return self.newToken("symbol", token.value)
+            return self.newToken("symbol", token.value, self.lineNumber)
         else:
             return None
 
@@ -584,7 +590,7 @@ class Scanner(Object):
             self.stepCharacter()
             while self.currentCharacter != "\"":
                 if self.currentCharacterClass == "end":
-                    self.error("unterminated comment")
+                    self.error("unterminated comment", lineNumber)
                 value.write(self.currentCharacter)
                 self.stepCharacter()
             self.stepCharacter()
@@ -594,16 +600,18 @@ class Scanner(Object):
 
     def scanBinarySelector(self):
         if self.currentCharacter == "-":
+            lineNumber = self.lineNumber
             self.stepCharacter()
-            return self.newToken("binary_selector","-")
+            return self.newToken("binary_selector", "-", lineNumber)
         if self.currentCharacterClass == "special_character":
+            lineNumber = self.lineNumber
             value = StringIO.StringIO()
             value.write(self.currentCharacter)
             self.stepCharacter()
             while self.currentCharacterClass == "special_character":
                 value.write(self.currentCharacter)
                 self.stepCharacter()
-            return self.newToken("binary_selector",value.getvalue())
+            return self.newToken("binary_selector", value.getvalue(), lineNumber)
         else:
             return None
 
@@ -620,9 +628,9 @@ class Scanner(Object):
             self.stepCharacter()
             if self.currentCharacter == "=":
                 self.stepCharacter()
-                return self.newToken("assignment",":=")
+                return self.newToken("assignment", ":=", self.lineNumber)
             else:
-                return self.newToken(":", ":")
+                return self.newToken(":", ":", self.lineNumber)
         else:
             return None
 
@@ -640,7 +648,7 @@ class VWScanner(Scanner):
             while self.currentCharacterClass in ["letter","digit","."]:
                 value.write(self.currentCharacter)
                 self.stepCharacter()
-            return self.newToken("identifier", value.getvalue())
+            return self.newToken("identifier", value.getvalue(), self.lineNumber)
         else:
             return None
 
@@ -653,7 +661,7 @@ class ST80Scanner(Scanner):
         # UNDERLINE is used as short assignment
         if self.currentCharacter == "_":
             self.stepCharacter()
-            return self.newToken("assignment", "_")
+            return self.newToken("assignment", "_", self.lineNumber)
         else:
             return Scanner.scanAssignment(self)
 
@@ -677,6 +685,9 @@ class Node(Object):
         return False
 
     def isLiteralValueNode(self):
+        return False
+
+    def isLiteralArrayNode(self):
         return False
 
     def isBlockNode(self):
@@ -741,13 +752,13 @@ class SequenceNode(Node):
 class ArrayNode(Node):
     def __init__(self):
         Node.__init__(self)
-        self.statements = []
+        self.elements = []
 
     def isArrayNode(self):
         return True
 
     def addStatement(self, aNode):
-        self.statements.append(aNode)
+        self.elements.append(aNode)
 
 class ExpressionNode(Node):
     def printStructure(self, indent=0):
@@ -758,6 +769,10 @@ class PrimaryNode(Node):
         print self.__class__.__name__
 
 class MessageNode(Node):
+    def __init__(self):
+        Node.__init__(self)
+        self.receiver = None
+
     def printStructure(self, indent=0):
         print self.__class__.__name__
         print "  receiver:"
@@ -1111,12 +1126,8 @@ class Parser(Object):
         self.step()
         return node
 
-    #parseLiteralByteArrayObject
-    #(currentToken isLiteralToken and:
-    #[currentToken value isInteger and:[currentToken value between: 0 and: 255]])
-    #ifFalse: [self parserError: (  # Expecting8bitInteger << #browser >> 'Expecting 8-bit integer')].
-    #    ^ self parsePrimitiveLiteral
     def parseLiteralArray(self, nested = False):
+        # Special array types, like #[] must be handled in subclasses.
         if self.currentToken.matches("array") or (nested and self.currentToken.matches("(")):
             newNode = LiteralArrayNode(isForByteArray=False)
             self.step()
@@ -1129,24 +1140,7 @@ class Parser(Object):
                 self.reportParsingError('")" expected', self.currentToken)
             self.step()
             return newNode
-        elif self.currentToken.matches("bytearray"):
-            newNode = LiteralArrayNode(isForByteArray=True)
-            self.step()
-            while True:
-                node = self.parseNumberLiteral()
-                if node is None:
-                    break
-                #if not (0 <= node.value.getInternalValue() <= 255):
-                #    print self.scanner.fragment.getSource()
-                #    self.reportParsingError('byte arrays only support 8 bit numbers '+repr(node.value.getInternalValue()))
-                newNode.addElement(node)
-            if not self.matches("]"):
-                print self.scanner.fragment.getSource()
-                self.reportParsingError('"]" expected', self.currentToken)
-            self.step()
-            return newNode
-        else:
-             return None
+        return None
 
     def parseLiteralArrayObject(self):
         node = self.parseNumberLiteral()
@@ -1228,6 +1222,7 @@ class Parser(Object):
         print self.scanner.fragment.source
         lineNumber = self.lineNumber
         if token is not None:
+            assert token.lineNumber is not None
             lineNumber += token.lineNumber
         print "Line", str(lineNumber)+":", aString,
         if token is not None:
@@ -1241,7 +1236,7 @@ class GSParser(Parser):
     def parsePrimitiveObject(self):
         node = Parser.parsePrimitiveObject(self)
         if node is not None:
-            return Node
+            return node
         node = self.parseCurlyArray()
         if node is not None:
             return node
@@ -1257,11 +1252,72 @@ class GSParser(Parser):
             self.step()
             return node
         else:
-            self.reportParsingError('"}" expected', self.currentyToken)
+            self.reportParsingError('"}" expected', self.currentToken)
+
+    def parseLiteralArray(self, nested = False):
+        node = Parser.parseLiteralArray(self, nested)
+        if node is not None:
+            return node
+        node = self.parseByteArrayOrArrayBuilder(nested)
+        if node is not None:
+            return node
+        return None
+
+    # GS needs to support byte arrays (without comma) and
+    # array builder with comma and expressions.
+    def parseByteArrayOrArrayBuilder(self, nested = False):
+        if self.currentToken.matches("bytearray"):
+            self.step()
+            node = self.parsePrimitiveObject()
+            isArrayBuilder = self.matches("binary_selector", ",") or not node.isLiteralValueNode()
+            if isArrayBuilder:
+                newNode = ArrayNode()
+                newNode.addStatement(node)
+                while self.matches("binary_selector", ","):
+                    self.step()
+                    node = self.parsePrimitiveObject()
+                    if node is None:
+                        self.reportParsingError('Missing object after comma in array.', self.currentToken)
+                    newNode.addStatement(node)
+            else:
+                newNode = LiteralArrayNode(isForByteArray=True)
+                newNode.addElement(node)
+                while True:
+                    node = self.parseNumberLiteral()
+                    if node is None:
+                      break
+                    newNode.addElement(node)
+            if not self.matches("]"):
+                print self.scanner.fragment.getSource()
+                self.reportParsingError('Missing ] for #[ array.', self.currentToken)
+            self.step()
+            return newNode
+        return None
 
 class VWParser(Parser):
     def scannerClass(self):
         return VWScanner
+
+    def parseLiteralArray(self, nested = False):
+        node = Parser.parseLiteralArray(self, nested)
+        if node is not None:
+            return node
+        # VW #[] are byte arrays without comma separator.
+        # GS #[] is not restricted to bytes and has a comma separator.
+        if self.currentToken.matches("bytearray"):
+            newNode = LiteralArrayNode(isForByteArray=True)
+            self.step()
+            while True:
+                node = self.parseNumberLiteral()
+                if node is None:
+                    break
+                newNode.addElement(node)
+            if not self.matches("]"):
+                print self.scanner.fragment.getSource()
+                self.reportParsingError('Byte arrays can only store bytes or "]" expected', self.currentToken)
+            self.step()
+            return newNode
+        return None
 
 class BasicClass(Object):
     def __init__(self, aString):
@@ -1292,6 +1348,11 @@ class BasicClass(Object):
         categories.sort()
         return categories
 
+    def remove(self):
+        assert self.image.classes.has_key(self.name)
+        del self.image.classes[self.name]
+        assert not self.image.classes.has_key(self.name)
+
 class Class(BasicClass):
     def __init__(self, aString):
         BasicClass.__init__(self, aString)
@@ -1300,6 +1361,7 @@ class Class(BasicClass):
         self.classVars = []
         self.classType = ""
         self.classOptions = []
+        self.constraints = None
 
     def setName(self, aString):
         assert self.name == aString
@@ -1331,6 +1393,11 @@ class Class(BasicClass):
         #print "Set classOptions", someStrings
         assert self.classOptions == []
         self.classOptions = someStrings
+
+    def setConstraints(self, someConstraints):
+        #print "Set constraints", someConstraints
+        assert self.constraints == None
+        self.constraints = someConstraints
 
     def getClassDefinition(self):
         stream = StringIO.StringIO()
@@ -1385,6 +1452,8 @@ class CompiledMethod(Object):
         print self.getSignature()
         print self.source
 
+    def tokensAsStrings(self):
+        return VWScanner(Fragment(self.source)).allTokenValues()
 
 class Compiler(Object):
     def makeCompiledMethodForSource(self, aFragment):
@@ -1610,7 +1679,7 @@ class TonelLoader(PackageLoader, GSScanner):
         if self.currentCharacter != ":":
             return None
         self.stepCharacter()
-        return Token("colon",":")
+        return Token("colon", ":", self.lineNumber)
 
     def scanTonelIdentifierOrKeyword(self):
         if not self.currentCharacter.isalpha() or self.currentCharacter == "_":
@@ -1634,7 +1703,7 @@ class TonelLoader(PackageLoader, GSScanner):
         while self.currentCharacter in ">":
             value.write(self.currentCharacter)
             self.stepCharacter()
-        return Token("binary", value.getvalue())
+        return Token("binary", value.getvalue(), self.lineNumber)
 
     def scanTonelSpecial(self):
         specialCharacters = ":>"
@@ -1676,6 +1745,8 @@ class TonelLoader(PackageLoader, GSScanner):
                 self.targetClass.setClassVars(value)
             elif key == "gs_options":
                 self.targetClass.setClassOptions(value)
+            elif key == "gs_constraints":
+                self.targetClass.setConstraints(value)
             elif key == "type":
                 self.targetClass.setClassType(value)
             else:
@@ -1713,10 +1784,13 @@ class TonelLoader(PackageLoader, GSScanner):
         if special is None or not special.matches("special", ">>"):
             self.reportTonelError(None, ">> expected")
         self.currentToken = self.getToken()
-        methodSource = StringIO.StringIO()
+        messagePattern = StringIO.StringIO()
         while self.currentToken.type in ['identifier', 'keyword', 'white', 'binary_selector']:
-            methodSource.write(self.currentToken.value)
+            messagePattern.write(self.currentToken.value)
             self.currentToken = self.getToken()
+        messagePattern = messagePattern.getvalue().strip()
+        methodSource = StringIO.StringIO()
+        methodSource.write(messagePattern)
         self.parseTonelMethodBody(methodSource)
         methodSource = methodSource.getvalue().strip()
         #print methodSource
@@ -1795,15 +1869,36 @@ class Image(Object):
         self.classes = {}
         self.filename = None
 
-    def findOrCreateClassNamed(self, aString):
+    def findClassNamed(self, aString, ignoreNamespaces = False):
         parts = aString.split()
         className = parts[0]
-        newClass = self.classes.get(className, None)
+        if ignoreNamespaces:
+            className = className.split(".")[-1]
+            newClass = None
+            for each in self.classes.itervalues():
+                if each.getUnqualifiedName() == className:
+                    newClass = each
+                    break
+        else:
+            newClass = self.classes.get(className, None)
         if newClass is None:
-            newClass = Class(className)
-            self.classes[className] = newClass
-            newClass.image = self
-            newClass.metaClass.image = self
+            return None
+        if len(parts) == 1:
+            return newClass
+        if len(parts) == 2 and parts[1] == "class":
+            return newClass.metaClass
+        self.error("Unsupported class name", aString)
+
+    def findOrCreateClassNamed(self, aString):
+        newClass = self.findClassNamed(aString)
+        if newClass is not None:
+            return newClass
+        parts = aString.split()
+        className = parts[0]
+        newClass = Class(className)
+        self.classes[className] = newClass
+        newClass.image = self
+        newClass.metaClass.image = self
         if len(parts) == 1:
             return newClass
         if len(parts) == 2 and parts[1] == "class":
@@ -1854,7 +1949,7 @@ class Image(Object):
             result += len(each.metaClass.methodsDictionary)
         return result
 
-    def cache(self, recompile):
+    def cache(self):
         assert self.filename is not None
         newFilename = self.filename + ".cached"
         stream = open(newFilename, "wb")
@@ -1866,8 +1961,6 @@ class Image(Object):
 
     def getShortImageName(self):
         return (self.imageName.split("."))[0]
-
-
 
 class ImageBuilder(Object):
     def __init__(self, targetImage):
@@ -1901,6 +1994,8 @@ class ImageBuilder(Object):
         self.error("Unsupported file type", type)
 
     def newPackageLoader(self, aFilename, type):
+        if not os.path.exists(aFilename):
+            self.error("File not found", aFilename)
         packageType = self.packageTypeForFilename(aFilename, type)
         loaderClass = self.packageLoaderClassFor(packageType)
         return loaderClass(self.targetImage, aFilename)
