@@ -11,6 +11,8 @@ import cPickle as pickle
 
 from slib.Kernel import *
 
+from slib.progressbar import ProgressBar
+
 class Fragment(Object):
     # Another subclass of Fragment could reference externally stored source code.
 
@@ -1873,8 +1875,11 @@ class RowanLoader(PackageLoader):
         packageDirectories = glob.glob(os.path.join(aFilename, "rowan", "sources", "*"))
         if len(packageDirectories) == 0:
             self.error(aFilename, "No packages found.")
-        for each in packageDirectories:
+        progressBar = ProgressBar(len(packageDirectories))
+        for index, each in enumerate(packageDirectories):
             TonelLoader(self.targetImage, each).load()
+            progressBar.update(index+1)
+        progressBar.finish()
 
 class Image(Object):
     def __init__(self):
