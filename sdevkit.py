@@ -21,8 +21,8 @@ class LauncherFrame(ui.ApplicationFrame):
     def __init__(self, master):
         ui.ApplicationFrame.__init__(self, master = master)
         
-        self.image1 = None
-        self.image2 = None
+        Image.image1 = None
+        Image.image2 = None
 
         self.createPopupMenus()
         self.horizontalScrollbarUpdateInfo = 10
@@ -109,14 +109,14 @@ class LauncherFrame(ui.ApplicationFrame):
         return image
         
     def loadImages(self): 
-        if self.image1 is None:
-            self.image1 = self.loadCachedImage(Configuration.globalConfiguration.image1)
-        if self.image2 is None:
-            self.image2 = self.loadCachedImage(Configuration.globalConfiguration.image2)
+        if Image.image1 is None:
+            Image.image1 = self.loadCachedImage(Configuration.globalConfiguration.image1)
+        if Image.image2 is None:
+            Image.image2 = self.loadCachedImage(Configuration.globalConfiguration.image2)
 
     def onLoadImages(self):
-        self.image1 = None
-        self.image2 = None
+        Image.image1 = None
+        Image.image2 = None
         self.loadImages()
         
     def onOpenCompareTool(self):
@@ -137,7 +137,7 @@ class LauncherFrame(ui.ApplicationFrame):
         self.transcript.delete('1.0', tk.END)
 
     def getAllImages(self):
-        return [self.image1, self.image2]
+        return [Image.image1, Image.image2]
 
     def getAllClasses(self):
         allClasses = []

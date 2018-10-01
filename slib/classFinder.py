@@ -116,7 +116,7 @@ class ClassFinderFrame(ui.ApplicationFrame):
     def updateListbox(self, pattern):
         self.listbox.delete(0, tk.END)
         for each in self.wrappers:
-            if fnmatch.fnmatch(each.value.getUnqualifiedName(), pattern + "*"):
+            if fnmatch.fnmatch(each.value.getUnqualifiedName(), pattern.strip() + "*"):
                 self.listbox.insert(tk.END, each)
 
     def findClassForSelectedString(self, aString):

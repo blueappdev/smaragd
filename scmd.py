@@ -310,15 +310,19 @@ class Token(Object):
         if self.type == "character":
             return "$" + self.value
         elif self.type == "symbol":
-            stream = StringIO.StringIO()
-            stream.write("'")
-            for ch in self.value:
-                if ch == "'":
-                    stream.write("''")
-                else:
-                    stream.write(ch)
-            stream.write("'")
-            return "#" + stream.getvalue()
+            isSimpleSymbol = self.value.isalnum() and self.value[0].isalpha()
+            if isSimpleSymbol:
+                return "#" + self.value
+            else:
+                stream = StringIO.StringIO()
+                stream.write("'")
+                for ch in self.value:
+                    if ch == "'":
+                        stream.write("''")
+                    else:
+                        stream.write(ch)
+                stream.write("'")
+                return "#" + stream.getvalue()
         elif self.type == "string":
             stream = StringIO.StringIO()
             stream.write("'")
@@ -1354,7 +1358,7 @@ class BasicClass(Object):
         self.instVars = someStrings
 
     def getAllMethods(self):
-        return sorted(self.methodsDictionary.values())
+        return sorted(self.methodsDictionary.values(), key=lambda each: each.selector)
 
     def getAllMethodCategories(self):
         categories = []
@@ -1368,6 +1372,14 @@ class BasicClass(Object):
         assert self.image.classes.has_key(self.name)
         del self.image.classes[self.name]
         assert not self.image.classes.has_key(self.name)
+
+    def getShadowClass(self):
+        shadowImage = None
+        if self.image == Image.image1:
+            shadowImage = Image.image2
+        if self.image == Image.image2:
+            shadowImage = Image.image1
+        return shadowImage.findClassNamed(self.name, ignoreNamespaces = True)
 
 class Class(BasicClass):
     def __init__(self, aString):
@@ -1470,6 +1482,12 @@ class CompiledMethod(Object):
 
     def tokensAsStrings(self):
         return VWScanner(Fragment(self.source)).allTokenValues()
+
+    def getShadowMethod(self):
+        shadowClass = self.methodClass.getShadowClass()
+        if shadowClass is None:
+            return None
+        return shadowClass.methodsDictionary.get(self.selector, None)
 
 class Compiler(Object):
     def makeCompiledMethodForSource(self, aFragment):

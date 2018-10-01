@@ -5,12 +5,12 @@
 import Tkinter as tk
 import UI as ui
 from compareTool import CompareWindow
+import scmd
 
 class ClassBrowser(ui.ApplicationFrame):
     def __init__(self, master, parentApplication, domain):
         ui.ApplicationFrame.__init__(self, master = master, parentApplication = parentApplication)
         self.domain = domain
-        self.shadowClass = self.findShadowClass(self.domain)
         self.initializeSide()
         self.master.title("[CB] " + self.domain.getBrowserDescription())
         self.master.protocol("WM_DELETE_WINDOW", self.master.destroy)
@@ -88,16 +88,11 @@ class ClassBrowser(ui.ApplicationFrame):
         compareTool = CompareWindow(self.master)
         compareFrame = compareTool.compareFrame
         compareFrame.leftFrame.setText(method.source)
-        compareFrame.rightFrame.setText(self.getShadowMethod(method).source)
+        compareFrame.rightFrame.setText(method.getShadowMethod().source)
         compareFrame.updateResults()
 
-    def getShadowMethod(self, aMethod):
-        if self.shadowClass is None:
-            return None
-        return self.shadowClass.methodsDictionary.get(aMethod.selector, None)
-
     def compareMethod(self, aMethod):
-        shadowMethod = self.getShadowMethod(aMethod)
+        shadowMethod = aMethod.getShadowMethod()
         if shadowMethod is None:
             return "missing"
         if aMethod.source == shadowMethod.source:
@@ -116,14 +111,6 @@ class ClassBrowser(ui.ApplicationFrame):
         if result == "sameEffect":
             return "#7F6F00"
         return None
-
-    def findShadowClass(self, aClass):
-        shadowImage = None
-        if aClass.image == self.parentApplication.image1:
-            shadowImage = self.parentApplication.image2
-        if aClass.image == self.parentApplication.image2:
-            shadowImage = self.parentApplication.image1
-        return shadowImage.findClassNamed(aClass.name, ignoreNamespaces = True)
 
     def buildBottomFrame(self):
         self.buildEditorFrame()
