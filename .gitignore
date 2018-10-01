@@ -11,10 +11,10 @@
 *.cached
 .DS_Store
 todo
-r
-v
-t
-s
+/r
+/v
+/t
+/s
 smaragd
 
 .idea/
@@ -23,5 +23,6 @@ thirdparty/
 testdata/
 slib/testdata/
 packages/
+examples/
 tmp/
 
