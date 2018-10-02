@@ -1390,6 +1390,7 @@ class Class(BasicClass):
         self.classType = ""
         self.classOptions = []
         self.constraints = None
+        self.comment = ""
 
     def setName(self, aString):
         assert self.name == aString
@@ -1426,6 +1427,10 @@ class Class(BasicClass):
         #print "Set constraints", someConstraints
         assert self.constraints == None
         self.constraints = someConstraints
+
+    def setComment(self, aString):
+        assert self.comment == "", "different comment"
+        self.comment = aString
 
     def getClassDefinition(self):
         stream = StringIO.StringIO()
@@ -1573,9 +1578,6 @@ class TonelLoader(PackageLoader, GSScanner):
 
     def parseTonelUnit(self):
         self.stepTonelToken()
-        if self.currentToken.matches("string"):
-            comment = self.currentToken.value
-            self.stepTonelToken()
         self.parseTonelClass()
         if self.currentCharacter != "":
             self.reportTonelError(self.currentToken.lineNumber, "unexpected", repr(self.currentToken.value))
@@ -1751,6 +1753,10 @@ class TonelLoader(PackageLoader, GSScanner):
         return Token("special", value.getvalue(), lineNumber)
 
     def parseTonelClass(self):
+        comment = None
+        if self.currentToken.matches("string"):
+            comment = self.currentToken.value
+            self.stepTonelToken()
         if not self.currentToken.matches("identifier"):
             print self.currentToken
             assert self.currentToken.matches("identifier")
@@ -1762,6 +1768,8 @@ class TonelLoader(PackageLoader, GSScanner):
         attributes = self.currentToken.value
         assert len(attributes) > 0, "empty class attributes"
         self.targetClass = self.targetImage.findOrCreateClassNamed(attributes["name"])
+        if comment is not None:
+            self.targetClass.setComment(comment)
         for key, value in attributes.items():
             key = key.lower()
             if key == "category":
@@ -1876,11 +1884,8 @@ class TonelLoader(PackageLoader, GSScanner):
 class SmaragdLoader(PackageLoader):
     def processFile(self, aFilename):
         print "Load smaragd file", aFilename
-        stream = codecs.open(aFilename, encoding = 'UTF-8')
-        while True:
-            line = stream.readline()
-            if line == "":
-                break
+        stream = Filename(aFilename).readStream()
+        for line in stream.readlines():
             line = line.strip()
             if line == "" or line.startswith("#"):
                 continue

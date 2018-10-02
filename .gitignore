@@ -19,6 +19,7 @@ smaragd
 
 .idea/
 BACKUP/
+config
 thirdparty/
 testdata/
 slib/testdata/

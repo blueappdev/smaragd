@@ -12,6 +12,7 @@ class ClassBrowser(ui.ApplicationFrame):
         ui.ApplicationFrame.__init__(self, master = master, parentApplication = parentApplication)
         self.domain = domain
         self.initializeSide()
+        self.initializeCommentMode()
         self.master.title("[CB] " + self.domain.getBrowserDescription())
         self.master.protocol("WM_DELETE_WINDOW", self.master.destroy)
         self.pack(fill=tk.BOTH, expand=1)
@@ -36,6 +37,11 @@ class ClassBrowser(ui.ApplicationFrame):
         self.side = tk.StringVar()
         self.side.set(newSide)
         self.side.trace("w", self.sideChanged)
+
+    def initializeCommentMode(self):
+        self.commentMode = tk.BooleanVar()
+        self.commentMode.set(False)
+        self.commentMode.trace("w", self.commentModeChanged)
 
     def buildTopFrame(self):
         self.topWindow = tk.PanedWindow(
@@ -63,6 +69,10 @@ class ClassBrowser(ui.ApplicationFrame):
               #padx = 20,
               variable=self.side,
               value='class').pack(side=tk.LEFT)
+        tk.Checkbutton(self.radioButtonFrame,
+              text="Comment",
+              #padx = 20,
+              variable=self.commentMode).pack(side=tk.LEFT)
         self.radioButtonFrame.pack(fill=tk.BOTH, expand=1)
         self.topWindow.add(self.topLeftFrame)
 
@@ -128,6 +138,9 @@ class ClassBrowser(ui.ApplicationFrame):
     def sideChanged(self, *unused):
         self.updateMethodProtocols()
 
+    def commentModeChanged(self, *unused):
+        self.updateEditor()
+
     def getSelectedMethodProtocols(self):
         return self.methodProtocolsListbox.getSelectedItems()
 
@@ -163,12 +176,20 @@ class ClassBrowser(ui.ApplicationFrame):
         self.methodsSelectionChanged()
 
     def updateEditor(self):
-        selectedItems = self.methodsListbox.getSelectedItems()
-        if selectedItems == []:
-            self.editor.setText(self.domain.getClassDefinition())
+        if self.commentMode.get():
+            self.showClassComment()
         else:
-            #print repr(selectedItems[0].source)
-            self.editor.setText(selectedItems[0].source)
+            selectedItems = self.methodsListbox.getSelectedItems()
+            if selectedItems == []:
+                self.showClassDefinition()
+            else:
+                self.editor.setText(selectedItems[0].source)
+
+    def showClassComment(self):
+        self.editor.setText(self.domain.comment)
+
+    def showClassDefinition(self):
+        self.editor.setText(self.domain.getClassDefinition())
 
     def onCompareWithShadowClass(self):
         print "Compare with shadow class", self.domain.name
