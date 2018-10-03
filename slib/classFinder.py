@@ -51,6 +51,7 @@ class ClassFinderFrame(ui.ApplicationFrame):
                 textvariable=self.methodNameVar,
                 font=self.getFont())
         self.entry.pack(side=tk.TOP, fill=tk.X, pady=5, padx=5)
+        self.entry.focus()
 
     def buildSearchResultsListbox(self):
         self.listboxLabel = tk.Label(

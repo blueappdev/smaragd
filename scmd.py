@@ -8,6 +8,7 @@ import json
 import StringIO, io
 import codecs
 import cPickle as pickle
+from slib.extensions import *
 
 from slib.Kernel import *
 
@@ -250,13 +251,12 @@ class VWPackageLoader(PackageLoader):
             else:
                 compiler = self.newCompiler()
             node = compiler.process(Fragment(self.chunk))
-            #print node.evaluate(self)
+            node.evaluate(self)
             return
         if self.mode == "category":
             if strippedChunk == "":
                 self.error("unexpected empty chunk in category")
                 return
-            #self.printChunk()
             components = VWScanner(Fragment(self.chunk)).allTokens()
             action = components[-2].value
             assert action in ['methodsFor:', 'methodsForUndefined:']
@@ -271,7 +271,6 @@ class VWPackageLoader(PackageLoader):
             self.mode = "method"
             return
         if self.mode == "method":
-            #self.printChunk()
             if strippedChunk == "":
                 self.mode = "code"
                 return
@@ -284,11 +283,45 @@ class VWPackageLoader(PackageLoader):
             return
         self.error("unexpected characters after final exclamation mark")
 
-    # An empty chunk introduces a methods category chunk and a method definition chunk.
-    def printChunk(self):
-        #if chunk.strip()
-        print "chunk <" + self.chunk.strip() + ">"
-        #print "====================="
+    def execute(self, receiver, selector, arguments):
+        if selector == "create:named:":
+            return
+        if selector == "type:named:property:value:":
+            return
+        if (selector == "defineClass:superclass:indexedType:private:instanceVariableNames:classInstanceVariableNames:imports:category:" or
+            selector == "defineClass:superclass:indexedType:private:instanceVariableNames:classInstanceVariableNames:imports:category:attributes:"):
+            unqualifiedClassName = arguments[0].value
+            assert len(unqualifiedClassName.split(".")) == 1
+            namespace = StringWrapper(receiver).cutPrefix("Smalltalk.")
+            qualifiedClassName = namespace + "." + unqualifiedClassName
+            targetClass = self.targetImage.findOrCreateClassNamed(qualifiedClassName)
+            superclassName = arguments[1]
+            if superclassName is not None:
+                targetClass.setSuperclass(self.targetImage.findOrCreateClassNamed(superclassName.value))
+            targetClass.setInstVars(arguments[4].value.split())
+            targetClass.setClassInstVars(arguments[5].value.split())
+            targetClass.setClassCategory(arguments[7].value)
+            return
+        if selector == "comment:":
+            targetClass = self.targetImage.findOrCreateClassNamed(receiver)
+            comment = arguments[0].value
+            targetClass.setComment(comment)
+            return
+        if selector == "defineSharedVariable:private:constant:category:initializer:":
+            targetClass = self.targetImage.findOrCreateClassNamed(receiver)
+            sharedVariableName = arguments[0].value
+            targetClass.classVars.append(sharedVariableName)
+            return
+        if selector == "defineNameSpace:private:imports:category:":
+            return
+        if selector == "ifDefinedDo:":
+            return
+        if selector == "new":
+            return
+        if selector == "initialize":
+            return
+        self.error(selector, "not yet implemented")
+
 
 class Token(Object):
     def __init__(self, type, value, lineNumber):
@@ -719,6 +752,9 @@ class Node(Object):
         self.writeCodeOn(stream)
         print stream.getvalue()
 
+    def evaluate(self, aContext):
+        self.subclassResponsibility("Node>>evaluate:")
+
 class ReturnNode(Node):
     def __init__(self):
         self.assignment = None
@@ -759,7 +795,6 @@ class SequenceNode(Node):
             each.writeCodeOn(aStream)
 
     def evaluate(self, aContext):
-        print self
         assert self.temporaries == [], 'evaluation of temporaries not yet supported'
         for each in self.statements:
             result = each.evaluate(aContext)
@@ -782,6 +817,11 @@ class ExpressionNode(Node):
     def printStructure(self, indent=0):
         print self.__class__.__name__
 
+    def evaluate(self, aContext):
+        if self.primary is None:
+            return None
+        self.notYetImplemented("ExpressionNode>>evaluate")
+
 class PrimaryNode(Node):
     def printStructure(self, indent=0):
         print self.__class__.__name__
@@ -790,6 +830,8 @@ class MessageNode(Node):
     def __init__(self):
         Node.__init__(self)
         self.receiver = None
+        self.selector = None
+        self.arguments = None
 
     def printStructure(self, indent=0):
         print self.__class__.__name__
@@ -801,7 +843,10 @@ class MessageNode(Node):
         return True
 
     def evaluate(self, aContext):
-        self.notYetImplemented()
+        evaluatedReceiver = self.receiver.evaluate(aContext)
+        selector = self.selector
+        evaluatedArguments = map(lambda each: each.evaluate(aContext), self.arguments)
+        return aContext.execute(evaluatedReceiver, selector, evaluatedArguments)
 
 class CascadeNode(Node):
     def __init__(self):
@@ -841,6 +886,15 @@ class VariableNode(Node):
     def writeCodeOn(self, aStream):
         aStream.write(self.name)
 
+    def evaluate(self, aContext):
+        if self.name == "nil":
+            return None
+        if self.name == "false":
+            return False
+        if self.name == "true":
+            return True
+        return self.name
+
 class LiteralValueNode(Node):
     def __init__(self, aValue):
         Node.__init__(self)
@@ -870,6 +924,9 @@ class LiteralArrayNode(Node):
     def addElement(self, aValue):
         self.elements.append(aValue)
 
+    def evaluate(self, aContext):
+        return map(lambda each: each.evaluate(aContext), self.elements)
+
 class BlockNode(Node):
     def __init__(self):
         Node.__init__(self)
@@ -893,6 +950,9 @@ class BlockNode(Node):
             aStream.write("|")
         self.body.writeCodeOn(aStream)
         aStream.write("]")
+
+    def evaluate(self, aContext):
+        return "some block"
 
 class Parser(Object):
     def __init__(self, aFragment):
@@ -1055,6 +1115,7 @@ class Parser(Object):
         node = MessageNode()
         node.receiver = aNode
         node.selector = self.currentToken.value
+        node.arguments = []
         self.step()
         return node
 
@@ -1399,7 +1460,7 @@ class Class(BasicClass):
         assert self.superclass is None
         self.superclass = aClass
 
-    def setCategory(self, aString):
+    def setClassCategory(self, aString):
         #print "Set class category", aString
         assert self.category == ""
         self.category = aString
@@ -1773,12 +1834,11 @@ class TonelLoader(PackageLoader, GSScanner):
         for key, value in attributes.items():
             key = key.lower()
             if key == "category":
-                self.targetClass.setCategory(value)
+                self.targetClass.setClassCategory(value)
             elif key == "name":
                 self.targetClass.setName(value)
             elif key == "superclass":
-                mySuperclass = self.targetImage.findOrCreateClassNamed(value)
-                self.targetClass.setSuperclass(mySuperclass)
+                self.targetClass.setSuperclass(self.targetImage.findOrCreateClassNamed(value))
             elif key == "instvars":
                 self.targetClass.setInstVars(value)
             elif key == "classinstvars":
@@ -1932,6 +1992,8 @@ class Image(Object):
         self.error("Unsupported class name", aString)
 
     def findOrCreateClassNamed(self, aString):
+        if aString is None:
+            return None
         newClass = self.findClassNamed(aString)
         if newClass is not None:
             return newClass

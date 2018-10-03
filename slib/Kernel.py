@@ -25,11 +25,11 @@ class Object:
         print "halt:", string.join(map(lambda each: repr(each), args), " ")
         sys.exit(1)
 
-    def notYetImplemented(self):
-        self.error("not yet implemented")
+    def notYetImplemented(self, aString=""):
+        self.error("not yet implemented", aString)
 
-    def subclassResponsibility(self):
-        self.error("subclassResponsibility");
+    def subclassResponsibility(self, aString=""):
+        self.error("subclassResponsibility", aString);
 
     def trace(self, *args):
         if True:
@@ -53,20 +53,17 @@ class Object:
 
 class Magnitude:
     def __init__(self, aValue):
-        self.__value = aValue
+        self.value = aValue
 
     def __eq__(self, anObject):
-        return self.__class__ == anObject.__class__ and self.__value == anObject.__value
-
-    def getInternalValue(self):
-        return self.__value
+        return self.__class__ == anObject.__class__ and self.value == anObject.value
 
 class Character(Magnitude):
     pass
 
 class String(Magnitude):
     def printOn(self, aStream):
-        return repr(self.__value)
+        return repr(self.value)
 
 class Symbol(Magnitude):
     pass
@@ -96,4 +93,3 @@ class Filename:
 
     def writeStream(self):
         return codecs.open(self.filename, "w", encoding="UTF-8")
-
