@@ -59,6 +59,7 @@ class PackageLoader(Object):
         newMethod = compiler.makeCompiledMethodForSource(methodSource)
         newMethod.methodClass = self.targetImage.findOrCreateClassNamed(className)
         newMethod.category = self.currentMethodCategoryName
+        newMethod.package = self.targetPackage
         self.targetImage.addCompiledMethod(newMethod)
 
     def addInstanceMethod(self, className, methodSource):
@@ -283,8 +284,23 @@ class VWPackageLoader(PackageLoader):
             return
         self.error("unexpected characters after final exclamation mark")
 
+    def createPackage(self, packageType, packageName):
+        if packageType == "bundle":
+            return
+        elif packageType == "package":
+            #print "Create package", packageName
+            self.targetPackage = self.targetImage.findOrCreatePackageNamed(packageName)
+        else:
+            self.error("unexpected package type", packageType)
+            
     def execute(self, receiver, selector, arguments):
         if selector == "create:named:":
+            if receiver == "CodeComponent":
+                packageType = arguments[0].value
+                packageName = arguments[1].value
+                self.createPackage(packageType, packageName)
+            else:
+                self.error("Unexpected receiver for create:named:")
             return
         if selector == "type:named:property:value:":
             return
@@ -321,7 +337,6 @@ class VWPackageLoader(PackageLoader):
         if selector == "initialize":
             return
         self.error(selector, "not yet implemented")
-
 
 class Token(Object):
     def __init__(self, type, value, lineNumber):
@@ -1421,6 +1436,12 @@ class BasicClass(Object):
     def getAllMethods(self):
         return sorted(self.methodsDictionary.values(), key=lambda each: each.selector)
 
+    def getAllPackages(self):
+        packages = set()
+        for each in self.getAllMethods():
+            packages.add(each.package)
+        return sorted(packages, key=lambda each: each.name)
+
     def getAllMethodCategories(self):
         categories = []
         for each in self.getAllMethods():
@@ -1535,6 +1556,7 @@ class CompiledMethod(Object):
         self.source = None
         self.methodClass = None
         self.selector = None
+        self.package = None
 
     def __repr__(self):
         return self.__class__.__name__ + "(" + repr(self.selector) + ")"

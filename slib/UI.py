@@ -58,7 +58,8 @@ class BetterListbox(BasicFrame):
                 self,
                 selectmode=tk.EXTENDED,
                 activestyle=tk.DOTBOX,
-                font=self.getFont())
+                font=self.getFont(),
+                exportselection=False)
         self.__listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         scroll = tk.Scrollbar(self, command=self.__listbox.yview)
         self.__listbox.configure(yscrollcommand = scroll.set)

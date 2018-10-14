@@ -138,8 +138,8 @@ class ClassFinderFrame(ui.ApplicationFrame):
         reload(classBrowser)
         classBrowser.ClassBrowser(
                 newWindow,
-                parentApplication = self.parentApplication,
-                domain=selectedClass)
+                self.parentApplication,
+                selectedClass)
         self.master.destroy()
 
     def onCancel(self):

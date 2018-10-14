@@ -8,18 +8,22 @@ from compareTool import CompareWindow
 import scmd
 
 class ClassBrowser(ui.ApplicationFrame):
-    def __init__(self, master, parentApplication, domain):
+    def __init__(self, master, parentApplication, aClass):
         ui.ApplicationFrame.__init__(self, master = master, parentApplication = parentApplication)
-        self.domain = domain
+        self.currentClass = aClass
         self.initializeSide()
         self.initializeCommentMode()
-        self.master.title("[CB] " + self.domain.getBrowserDescription())
+        self.master.title("[CB] " + self.currentClass.getBrowserDescription())
         self.master.protocol("WM_DELETE_WINDOW", self.master.destroy)
         self.pack(fill=tk.BOTH, expand=1)
         self.panedWindow = tk.PanedWindow(self, orient=tk.VERTICAL,  sashpad=4, sashrelief=tk.RAISED)
         self.panedWindow.pack(fill=tk.BOTH, expand=1)
         self.buildTopFrame()
         self.buildBottomFrame()
+        self.initialUpdate()
+
+    def initialUpdate(self):
+        self.updatePackages()
         self.updateMethodProtocols()
 
     def buildMenubar(self, menubar):
@@ -30,7 +34,7 @@ class ClassBrowser(ui.ApplicationFrame):
         self.addMenuItem(newMenu, "Compare with shadow class", self.onCompareWithShadowClass)
 
     def initializeSide(self):
-        if self.domain.getAllMethods() == [] and self.domain.metaClass.getAllMethods() != []:
+        if self.currentClass.getAllMethods() == [] and self.currentClass.metaClass.getAllMethods() != []:
             newSide = "class"
         else:
             newSide = "instance"
@@ -55,6 +59,10 @@ class ClassBrowser(ui.ApplicationFrame):
 
     def buildTopLeftFrame(self):
         self.topLeftFrame = tk.Frame(self.topWindow)
+        self.packagesListbox = ui.BetterListbox(self.topLeftFrame)
+        self.packagesListbox.displayStringFunction = lambda aPackage: aPackage.name
+        self.packagesListbox.bind("<<ListboxSelect>>", self.packagesSelectionChanged)
+        self.packagesListbox.pack(fill=tk.BOTH, expand=1)
         self.methodProtocolsListbox = ui.BetterListbox(self.topLeftFrame)
         self.methodProtocolsListbox.bind("<<ListboxSelect>>", self.methodProtocolsSelectionChanged)
         self.methodProtocolsListbox.pack(fill=tk.BOTH, expand=1)
@@ -78,8 +86,8 @@ class ClassBrowser(ui.ApplicationFrame):
 
     def buildMethodsFrame(self):
         self.methodsListbox = ui.BetterListbox(self.topWindow)
-        self.methodsListbox.displayStringFunction = lambda m: m.selector
-        self.methodsListbox.displayColorFunction = lambda m: self.displayColorForMethod(m)
+        self.methodsListbox.displayStringFunction = lambda aMethod: aMethod.selector
+        self.methodsListbox.displayColorFunction = lambda aMethod: self.displayColorForMethod(aMethod)
         self.methodsListbox.bind("<<ListboxSelect>>", self.methodsSelectionChanged)
         self.topWindow.add(self.methodsListbox)
         self.popupMenu = tk.Menu(self.methodsListbox, tearoff=0)
@@ -129,6 +137,9 @@ class ClassBrowser(ui.ApplicationFrame):
         self.editor = ui.SmalltalkText(self.panedWindow)
         self.panedWindow.add(self.editor)
 
+    def packagesSelectionChanged(self, *unused):
+        self.updateMethods()
+
     def methodProtocolsSelectionChanged(self, *unused):
         self.updateMethods()
 
@@ -136,32 +147,42 @@ class ClassBrowser(ui.ApplicationFrame):
         self.updateEditor()
 
     def sideChanged(self, *unused):
-        self.updateMethodProtocols()
+        self.initialUpdate()
 
     def commentModeChanged(self, *unused):
         self.updateEditor()
+
+    def getSelectedPackages(self):
+        return self.packagesListbox.getSelectedItems()
 
     def getSelectedMethodProtocols(self):
         return self.methodProtocolsListbox.getSelectedItems()
 
     def getMethodCategories(self):
-        return self.getDomainSide().getAllMethodCategories()
+        return self.getClassSide().getAllMethodCategories()
 
-    def getDomainSide(self):
+    def getClassSide(self):
         side = self.side.get()
         if side == "instance":
-            return self.domain
+            return self.currentClass
         if side == "class":
-            return self.domain.metaClass
+            return self.currentClass.metaClass
         self.error("Unsupported side", side)
 
-    def getMethods(self):
+    def getVisibleMethods(self):
         methods = []
+        selectedPackages = self.getSelectedPackages()
         selectedMethodProtocols = self.getSelectedMethodProtocols()
-        for each in self.getDomainSide().getAllMethods():
-            if selectedMethodProtocols == [] or each.category in selectedMethodProtocols:
-                methods.append(each)
+        for each in self.getClassSide().getAllMethods():
+            if selectedPackages == [] or each.package in selectedPackages:
+                if selectedMethodProtocols == [] or each.category in selectedMethodProtocols:
+                    methods.append(each)
         return methods
+
+    def updatePackages(self):
+        self.packagesListbox.clear()
+        for each in self.getClassSide().getAllPackages():
+            self.packagesListbox.append(each)
 
     def updateMethodProtocols(self):
         self.methodProtocolsListbox.clear()
@@ -171,7 +192,7 @@ class ClassBrowser(ui.ApplicationFrame):
 
     def updateMethods(self):
         self.methodsListbox.clear()
-        for each in self.getMethods():
+        for each in self.getVisibleMethods():
             self.methodsListbox.append(each)
         self.methodsSelectionChanged()
 
@@ -183,16 +204,17 @@ class ClassBrowser(ui.ApplicationFrame):
             if selectedItems == []:
                 self.showClassDefinition()
             else:
+                #print "Method package", selectedItems[0].package.name
                 self.editor.setText(selectedItems[0].source)
 
     def showClassComment(self):
-        self.editor.setText(self.domain.comment)
+        self.editor.setText(self.currentClass.comment)
 
     def showClassDefinition(self):
-        self.editor.setText(self.domain.getClassDefinition())
+        self.editor.setText(self.currentClass.getClassDefinition())
 
     def onCompareWithShadowClass(self):
-        print "Compare with shadow class", self.domain.name
+        print "Compare with shadow class", self.currentClass.name
 
 
 
