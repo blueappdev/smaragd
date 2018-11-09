@@ -246,7 +246,7 @@ class VWPackageLoader(PackageLoader):
             if strippedChunk == "":
                 self.mode = "category"
                 return
-            # print strippedChunk
+            print "Stripped chunk", repr(strippedChunk)
             if strippedChunk.startswith("Root.GemStone."):
                 compiler = GSCompiler()
             else:
@@ -335,6 +335,8 @@ class VWPackageLoader(PackageLoader):
         if selector == "new":
             return
         if selector == "initialize":
+            return
+        if selector == "subclass:instVarNames:classVars:classInstVars:poolDictionaries:inDictionary:constraints:instancesInvariant:isModifiable:":
             return
         self.error(selector, "not yet implemented")
 
@@ -768,7 +770,8 @@ class Node(Object):
         print stream.getvalue()
 
     def evaluate(self, aContext):
-        self.subclassResponsibility("Node>>evaluate:")
+        print self.__class__
+        self.error("Node>>evaluate:")
 
 class ReturnNode(Node):
     def __init__(self):
@@ -1430,7 +1433,11 @@ class BasicClass(Object):
 
     def setInstVars(self, someStrings):
         #print "Set instVars", someStrings
-        assert self.instVars == []
+        if self.instVars != [] and self.instVars != someStrings:
+            print "Override instVars"
+            print "    Class", self.name
+            print "    Old instVars", self.instVars
+            print "    New instVars", someStrings
         self.instVars = someStrings
 
     def getAllMethods(self):
@@ -1478,7 +1485,12 @@ class Class(BasicClass):
         assert self.name == aString
 
     def setSuperclass(self, aClass):
-        assert self.superclass is None
+        #print "Set superclass", aClass.name, "for", self.name
+        if self.superclass is not None and self.superclass != aClass:
+            print "Class", self.name
+            print "Old superclass", self.superclass.name
+            print "New superclass", aClass.name
+            self.error("Different superclass")
         self.superclass = aClass
 
     def setClassCategory(self, aString):
