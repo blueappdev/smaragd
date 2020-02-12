@@ -56,10 +56,11 @@ class Tool:
         print string.join(map(lambda each: str(each), args), " "), "in", os.path.basename(self.currentFilename)+":"+str(lineNumber), "in", os.path.dirname(self.currentFilename)
         sys.exit(1)
     
-    def reportParsingError(self, aString, token = None):
+    def parsingError(self, aString, token = None):
+        if token is None:
+            token = self.currentToken
         print aString,  "instead of", token  
-        print os.path.basename(self.currentFilename)+":"+str(self.lineNumber), "in", os.path.dirname(self.currentFilename)
-        print self.selector
+        print os.path.basename(self.currentFilename)+":"+str(self.lineNumber), "in", os.path.dirname(self.currentFilename)+'/'
         sys.exit(1)
         
     def matches(self, type, value = None):
@@ -329,7 +330,7 @@ class Tool:
         if not self.parseMethodBody():
             self.reportTonelError(self.currentToken.lineNumber, "missing method body")
         if not self.matches("]"):  
-            self.reportTonelError(self.currentToken.lineNumber, "missing ]")
+            self.parsingError("missing ]")
         self.stepTonelToken() 
         #print "parseTonelMethod() return True", self.currentToken
         return True
@@ -431,7 +432,7 @@ class Tool:
                 self.stepToken()  # assignment
                 node.statement = self.parseAssignment()
                 if node.statement is None:
-                    self.reportParsingError("assignment must be followed by a statement", self.currentToken)
+                    self.parsingError("assignment must be followed by a statement", self.currentToken)
                 return node
             else:
                 return self.parseCascadeMessage()
@@ -451,7 +452,7 @@ class Tool:
             if node is None:
                 node = self.parseKeywordMessageWith(receiver)
             if node is None:
-                self.reportParsingError("something wrong in cascade", self.currentToken)
+                self.parsingError("something wrong in cascade", self.currentToken)
             cascadeNode.addMessage(node)
         return cascadeNode
 
@@ -532,7 +533,7 @@ class Tool:
             self.stepToken()
             return node
         else:
-            self.reportParsingError('"}" expected', self.currentToken)
+            self.parsingError('"}" expected', self.currentToken)
 
 
 
@@ -552,7 +553,7 @@ class Tool:
                     self.stepToken()
                     node = self.parsePrimitiveObject()
                     if node is None:
-                        self.reportParsingError('Missing object after comma in array.', self.currentToken)
+                        self.parsingError('Missing object after comma in array.', self.currentToken)
                     newNode.addStatement(node)
             else:
                 newNode = LiteralArrayNode(isForByteArray=True)
@@ -564,7 +565,7 @@ class Tool:
                     newNode.addElement(node)
             if not self.matches("]"):
                 print self.scanner.fragment.getSource()
-                self.reportParsingError('Missing ] for #[ array.', self.currentToken)
+                self.parsingError('Missing ] for #[ array.', self.currentToken)
             self.stepToken()
             return newNode
         return None
@@ -628,12 +629,12 @@ class Tool:
                     self.error("variable expected after colon")
                 node.addArgument(variableNode)
             if not self.currentToken.matches("binary_selector","|"):
-                self.reportParsingError('"|" expected after block variable list', self.currentToken)
+                self.parsingError('"|" expected after block variable list', self.currentToken)
             self.stepToken()
         node.body = self.parseStatements()
         #print self.currentToken
         if not self.currentToken.matches("]"):
-            self.reportParsingError('"]" expected at the end of a block', self.currentToken)
+            self.parsingError('"]" expected at the end of a block', self.currentToken)
         self.stepToken()
         return node
 
@@ -648,7 +649,7 @@ class Tool:
                 node = self.parseLiteralArrayObject()
             if not self.matches(")"):
                 print self.scanner.fragment.getSource()
-                self.reportParsingError('")" expected', self.currentToken)
+                self.parsingError('")" expected', self.currentToken)
             self.stepToken()
             return newNode
         node = self.parseByteArrayOrArrayBuilder(nested)
@@ -679,7 +680,7 @@ class Tool:
         self.stepToken()
         node = self.parseAssignment()
         if not self.currentToken.matches(")"):
-            self.reportParsingError('")" expected instead of', self.currentToken)
+            self.parsingError('")" expected instead of', self.currentToken)
         self.stepToken()
         return node
 
@@ -702,7 +703,7 @@ class Tool:
         self.stepToken()
         assignment = self.parseAssignment()
         if assignment is None:
-            self.reportParsingError('missing statement or expression after ^', self.currentToken)
+            self.parsingError('missing statement or expression after ^', self.currentToken)
         node.assignment = assignment
         return node
 

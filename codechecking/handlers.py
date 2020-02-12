@@ -74,10 +74,10 @@ class DebugHandler:
         #print "method category:", value
         
     def addClassMethod(self, name):
-        print "class method:", name 
+        print "class method:", name
         
     def addInstanceMethod(self, name):
-        print "instance method:", name  
+        print "instance method:", name
 
     def setClassComment(self, value):
         print "class comment...", repr(value)      
