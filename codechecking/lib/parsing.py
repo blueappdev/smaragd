@@ -879,8 +879,9 @@ class Parser:
         if len(ch) == 1:
             return ord(ch)
         if len(ch) == 2:
-            return ((ord(ch[0]) - 0xD800) * 0x400) + (ord(ch[1]) - 0xDC00) + 0x10000
-        self.error("cannot convert character", ch)
+            high, low = ch
+            return ((ord(high) - 0xD800) * 0x400) + (ord(low) - 0xDC00) + 0x10000
+        self.error("cannot decode UTF-8", ch)
         
     def getBasicToken(self):
         self.scanWhite()
@@ -914,7 +915,7 @@ class Parser:
         token = self.scanSimple()
         if token is not None:
             return token
-        print self.fragment.getSource()
+        self.parsingError("unexpected character " + repr(self.currentCharacter) + " " + hex(self.ord(self.currentCharacter)))
         self.error(
             "line",
             self.lineNumber,
@@ -935,7 +936,7 @@ class Parser:
         else:
             self.currentToken = self.nextToken
             self.nextToken = None
-        #print "stepToken()", self.currentToken
+        print "stepToken()", self.currentToken
     
     def newToken(self, type, value, lineNumber):
         return Token(type, value, lineNumber)
@@ -999,14 +1000,35 @@ class Parser:
 
     def scanNumber(self):
         if not (self.currentCharacterClass == "digit" or
-             (self.currentCharacter == "-" and self.nextCharacterClass == "digit")):
+            (self.currentCharacter == "-" and self.nextCharacterClass == "digit")):
             return None
         value = StringIO.StringIO()
         value.write(self.currentCharacter)
         self.stepCharacter()
         while self.currentCharacterClass == "digit":
-             value.write(self.currentCharacter)
-             self.stepCharacter()
+            value.write(self.currentCharacter)
+            self.stepCharacter()
+        if self.currentCharacter == "r":
+            value.write(self.currentCharacter)
+            self.stepCharacter()
+            if self.currentCharacterClass not in ["digit", "letter"]:
+                self.error("invalid radix number")
+            while self.currentCharacterClass in ["digit", "letter"]:
+                value.write(self.currentCharacter)
+                self.stepCharacter()       
+            return self.newToken("number", value.getvalue(), self.lineNumber)
+        if self.currentCharacter == "." and self.nextCharacterClass == "digit":
+            value.write(self.currentCharacter)
+            self.stepCharacter()
+            while self.currentCharacterClass == "digit":
+                value.write(self.currentCharacter)
+                self.stepCharacter()
+        if self.currentCharacter in "sp":
+            value.write(self.currentCharacter)
+            self.stepCharacter()
+            while self.currentCharacterClass == "digit":
+                value.write(self.currentCharacter)
+                self.stepCharacter()
         return self.newToken("number", value.getvalue(), self.lineNumber)
             
     def scanEnd(self):
