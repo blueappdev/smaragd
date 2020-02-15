@@ -120,3 +120,7 @@ TestClass1 >> testComplexExpressions [
     x1 := a1.b1.c1.d1.
     x2 := (a2.b2.c2.d2).
 ]
+
+TestClass1 >> testLiteralArray [
+    ^#('' #hash sym 11 , <<)
+]

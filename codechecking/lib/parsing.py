@@ -130,6 +130,7 @@ class Parser:
     def __init__(self):
         self.handler = None
         self.traceFlag = False
+        self.quietFlag = False
     
     def processCommandLine(self):
         try:
@@ -138,11 +139,23 @@ class Parser:
             sys.stderr.write("\nInterrupted...\n")
         #except:
         #    print "Internal error."
+
+    def usage(self):
+        print "code check"
+        print "checkcode.py [-q] file [file ...]"
+        print "    -q - quiet mode"
+        print
     
     def basicProcessCommandLine(self):
-        options, arguments = getopt.getopt(sys.argv[1:],"")
+        options, arguments = getopt.getopt(sys.argv[1:],"qt")
         for option, value in options:
-            pass
+            if option == "-q":
+                self.quietFlag = True
+            elif option == "-t":
+                self.traceFlag = True
+            else:
+                self.usage()
+                sys.exit(2)
         if arguments == []:
             print "No arguments found"
             sys.exit(2) 
@@ -738,7 +751,6 @@ class Parser:
                       break
                     newNode.addElement(node)
             if not self.matches("]"):
-                print self.scanner.fragment.getSource()
                 self.parsingError('Missing ] for #[ array.')
             self.stepToken()
             return newNode
@@ -763,14 +775,18 @@ class Parser:
             node = LiteralValueNode(Symbol(self.currentToken.value))
             self.stepToken()
             return node
+        if self.matches("binary_selector"):
+            node = LiteralValueNode(Symbol(self.currentToken.value))
+            self.stepToken()
+            return node
         if self.matches("character"):
             node = LiteralValueNode(Character(self.currentToken.value))
             self.stepToken()
             return node
-        if self.matches("qualified_name"):
-            node = LiteralValueNode(String(self.currentToken.value))
-            self.stepToken()
-            return node
+        #if self.matches("qualified_name"):
+        #    node = LiteralValueNode(String(self.currentToken.value))
+        #    self.stepToken()
+        #    return node
         return None
 
     def parseNumberLiteral(self):
@@ -857,7 +873,6 @@ class Parser:
                 newNode.addElement(node)
                 node = self.parseLiteralArrayObject()
             if not self.matches(")"):
-                print self.scanner.fragment.getSource()
                 self.parsingError('")" expected')
             self.stepToken()
             return newNode
@@ -915,7 +930,6 @@ class Parser:
             self.parsingError('missing statement or expression after ^')
         node.assignment = assignment
         return node
-
 
     def parseExpression(self):
         primary = self.parsePrimary()
@@ -1206,16 +1220,16 @@ class Parser:
             if self.currentCharacter == "[":
                 self.stepCharacter()
                 return self.newToken("bytearray", "#[", self.lineNumber)
-            if self.currentCharacter == "{":
-                self.stepCharacter()
-                self.scanWhite()
-                identifier = self.scanIdentifier()
-                assert identifier is not None
-                self.scanWhite()
-                if self.currentCharacter != "}":
-                    self.error("incomplete qualified reference literal")
-                self.stepCharacter()
-                return self.newToken("qualified_name", identifier.value, self.lineNumber)
+            #if self.currentCharacter == "{":
+            #    self.stepCharacter()
+            #    self.scanWhite()
+            #    identifier = self.scanIdentifier()
+            #    assert identifier is not None
+            #    self.scanWhite()
+            #    if self.currentCharacter != "}":
+            #        self.error("incomplete qualified reference literal")
+            #    self.stepCharacter()
+            #    return self.newToken("qualified_name", identifier.value, self.lineNumber)
             if self.currentCharacterClass == "letter":
                 value = StringIO.StringIO()
                 value.write(self.currentCharacter)
