@@ -46,9 +46,17 @@ class EmptyHandler:
         pass
 
     def addTemporary(self, name):
+        # This hack was added as a shortcut.
         pass
-
+    
+    def addUnaryMessageSend(self, name):
+        # This hack was added as a shortcut.
+        pass    
+    
     def setConstraints(self, name):
+        pass
+        
+    def addMethodBody(self, node):
         pass
 
 class BasicHandler(EmptyHandler):
@@ -422,12 +430,13 @@ class Parser:
         if not self.matches("["):       
             self.reportTonelError(self.currentToken.lineNumber, "missing [")
         self.stepToken()
-        if not self.parseMethodBody():
+        sequence = self.parseMethodBody()
+        if sequence is None:
             self.reportTonelError(self.currentToken.lineNumber, "missing method body")
         if not self.matches("]"):  
             self.parsingError("missing ]")
         self.stepTonelToken() 
-        #print "parseTonelMethod() return True", self.currentToken
+        self.handler.addMethodBody(sequence)
         return True
         
     def parseMessagePattern(self):
@@ -474,12 +483,10 @@ class Parser:
         return True
 
     def parseMethodBody(self):
-        #print "parseMessageBody() begin"
         pragmas = self.parsePragmas()
         temporaries = self.parseTemporaries()
         sequence = self.parseStatements()
         sequence.temporaries = temporaries
-        #print "parseMessageBody() return True", self.currentToken
         return sequence
 
     def parsePragmas(self):
@@ -569,7 +576,9 @@ class Parser:
             self.stepToken()
             node = self.parseUnaryMessageWith(receiver)
             if node is None:
-                node = self.parseKeywordMessageWith(receiver)
+                node = self.parseBinaryMessageWith(receiver)
+                if node is None:
+                    node = self.parseKeywordMessageWith(receiver)
             if node is None:
                 self.parsingError("something wrong in cascade")
             cascadeNode.addMessage(node)
@@ -606,16 +615,17 @@ class Parser:
             node = newNode
         return node
 
-    def splitNegativeNumberLiteral(self):
-        if not(self.matches("number") and self.currentToken.value.startswith('-')):
-            return
-        self.currentToken = self.newToken("binary_selector", "-", self.currentToken.lineNumber)
-        assert self.nextToken is None
-        self.nextToken = self.newToken(
-                "number", 
-                self.currentToken.value.lstrip("-"),
-                self.currentToken.lineNumber) 
-
+    def parseBinaryMessageWith(self, aNode):
+        self.splitNegativeNumberLiteral()
+        if not self.matches("binary_selector"):
+            return None
+        node = MessageNode()
+        node.receiver = aNode
+        node.selector = self.currentToken.value
+        self.stepToken()
+        node.arguments = [self.parseUnaryMessage()]
+        return node        
+        
     def parseUnaryMessage(self):
         node = self.parsePrimitiveObject()
         while self.matches("identifier"):
@@ -630,8 +640,21 @@ class Parser:
         node.selector = self.currentToken.value
         node.arguments = []
         self.stepToken()
+        # BEGIN OF HACK
+        self.handler.addUnaryMessageSend(node.selector)
+        # END OF HACK
         return node
-
+    
+    def splitNegativeNumberLiteral(self):
+        if not(self.matches("number") and self.currentToken.value.startswith('-')):
+            return
+        self.currentToken = self.newToken("binary_selector", "-", self.currentToken.lineNumber)
+        assert self.nextToken is None
+        self.nextToken = self.newToken(
+                "number", 
+                self.currentToken.value.lstrip("-"),
+                self.currentToken.lineNumber) 
+    
     def parsePrimitiveObject(self):
         node = self.parseVariable()
         if node is not None:
@@ -1286,6 +1309,9 @@ class ReturnNode(Node):
 
     def isReturnNode(self):
         return True
+        
+    def getFirstStatement(self):
+        return self.assignment.getFirstStatement()
 
 class MethodNode(Node):
     def __init__(self):
@@ -1305,6 +1331,9 @@ class SequenceNode(Node):
 
     def addStatement(self, aNode):
         self.statements.append(aNode)
+        
+    def getFirstStatement(self):
+        return self.statements[0].getFirstStatement()
 
     def printStructure(self, indent=0):
         print self.__class__.__name__
@@ -1337,11 +1366,21 @@ class ArrayNode(Node):
 
     def addStatement(self, aNode):
         self.elements.append(aNode)
+        
+    def getFirstStatement(self):
+        return None
 
 class ExpressionNode(Node):
+    def __init__(self):
+        Node.__init__(self)
+        self.primary = None
+        
     def printStructure(self, indent=0):
         print self.__class__.__name__
-
+        
+    def getFirstStatement(self):
+        return None
+        
     def evaluate(self, aContext):
         if self.primary is None:
             return None
@@ -1366,6 +1405,9 @@ class MessageNode(Node):
 
     def isMessageNode(self):
         return True
+        
+    def getFirstStatement(self):
+        return self
 
     def evaluate(self, aContext):
         evaluatedReceiver = self.receiver.evaluate(aContext)
@@ -1382,13 +1424,19 @@ class CascadeNode(Node):
 
     def addMessage(self, aMessageNode):
         self.messages.append(aMessageNode)
+        
+    def getFirstStatement(self):
+        return self.messages[0]
 
 class AssignmentNode(Node):
     def __init__(self):
         Node.__init__(self)
         self.variable = None
         self.statement = None
-
+        
+    def getFirstStatement(self):
+        return self.statement.getFirstStatement()
+        
     def printStructure(self,indent):
         print self.__class__.__name__,
         self.variable.printStructure(indent)
@@ -1419,6 +1467,9 @@ class VariableNode(Node):
         if self.name == "true":
             return True
         return self.name
+        
+    def getFirstStatement(self):
+        return None
 
 class LiteralValueNode(Node):
     def __init__(self, aValue):
@@ -1436,6 +1487,9 @@ class LiteralValueNode(Node):
 
     def evaluate(self, aContext):
         return self.value
+        
+    def getFirstStatement(self):
+        return None
 
 class LiteralArrayNode(Node):
     def __init__(self, isForByteArray):
@@ -1451,6 +1505,9 @@ class LiteralArrayNode(Node):
 
     def evaluate(self, aContext):
         return map(lambda each: each.evaluate(aContext), self.elements)
+        
+    def getFirstStatement(self):
+        return None
 
 class BlockNode(Node):
     def __init__(self):
@@ -1478,6 +1535,9 @@ class BlockNode(Node):
 
     def evaluate(self, aContext):
         return "some block"
+
+    def getFirstStatement(self):
+        return None
         
 class Object:
     def error(self, *args):

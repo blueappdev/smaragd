@@ -13,6 +13,18 @@ Class {
 }
 
 { #category : 'protocol 1' }
+TestClass1 >> testRecursion1 [
+    "Recursion with return statement."
+    
+    ^self testRecursion1
+]
+
+TestClass1 >> testRecursion2 [
+    self 
+        testRecursion22;
+        send2
+]
+
 TestClass1 >> testMethod1: anArray [
     | a1 a2  |
     uhu := 1.
@@ -91,3 +103,11 @@ TestClass1 >> testPoorlyNamedTemporaries [
     ^nil
 ]
 
+TestClass1 >> testUnusualSenders [
+   1 self.
+   2 nil.
+]
+
+TestClass1 >> testBinarySelectorInCascade [
+    stream <<< 1;  <<<< 2
+]
