@@ -651,7 +651,7 @@ class Parser:
         return node
 
     def parseUnaryMessageWith(self, aNode):
-        self.trace("parseUnaryMessageWith()i - begin")
+        self.trace("parseUnaryMessageWith() - begin")
         if not self.matches("identifier"):
             return None
         node = MessageNode()
@@ -1107,6 +1107,10 @@ class Parser:
             while self.currentCharacterClass in ["letter","digit"]:
                 value.write(self.currentCharacter)
                 self.stepCharacter()
+                if (self.currentCharacterClass == "." 
+                    and self.nextCharacterClass == "letter"):
+                    value.write(self.currentCharacter)
+                    self.stepCharacter()
             value = value.getvalue()
             if value == "_":
                 return self.newToken("assignment", value, lineNumber)

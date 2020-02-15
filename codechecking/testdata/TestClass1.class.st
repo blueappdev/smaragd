@@ -86,7 +86,7 @@ TestClass1 >> testBlock [
 ]
 
 TestClass1 >> testCurlyBlock [
-    ^{:value | value.name == nil }
+    ^{:value | value.name == nil && value.date.year == 1984 }
 ]
 
 TestClass1 >> testBlockWithoutSpaceBeforeTemporaries [
@@ -116,3 +116,7 @@ TestClass1 >> testBinarySelectorInCascade [
     stream <<< 1;  <<<< 2
 ]
 
+TestClass1 >> testComplexExpressions [
+    x1 := a1.b1.c1.d1.
+    x2 := (a2.b2.c2.d2).
+]
