@@ -11,7 +11,7 @@ class CodeCheckingHandler(lib.parsing.BasicHandler):
         
     def addTemporary(self, name):
         if self.isPoorlyNamedVariable(name):
-            self.methodWarning("has poorly named variable", name)
+            self.methodWarning("has poorly named variable", repr(str(name)))
     
     def isPoorlyNamedVariable(self, str):
         if str == "e":

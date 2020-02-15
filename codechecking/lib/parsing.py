@@ -492,10 +492,17 @@ class Parser:
         if not self.matches("binary_selector", "<"):
             return
         self.stepToken()
-        while self.matches("keyword"):
+        if self.matches("identifier"):
+            "UnaryPragma"
             self.stepToken()
-            if not self.parsePrimitiveLiteral():
-                self.parsingError("primitive literal expected")
+        elif self.matches("keyword"):
+            "KeywordPragma"
+            while self.matches("keyword"):
+                self.stepToken()
+                if not self.parsePrimitiveLiteral():
+                    self.parsingError("primitive literal expected")
+        else:
+            self.parsingError("unary or keyword pragma expected")
         if not self.matches("binary_selector", ">"):
             self.parsingError("> expected")
         self.stepToken()
@@ -589,6 +596,7 @@ class Parser:
 
     def parseBinaryMessage(self):
         node = self.parseUnaryMessage()
+        self.splitNegativeNumberLiteral()
         while self.matches("binary_selector"):
             newNode = MessageNode()
             newNode.receiver = node
@@ -597,6 +605,16 @@ class Parser:
             newNode.arguments = [self.parseUnaryMessage()]
             node = newNode
         return node
+
+    def splitNegativeNumberLiteral(self):
+        if not(self.matches("number") and self.currentToken.value.startswith('-')):
+            return
+        self.currentToken = self.newToken("binary_selector", "-", self.currentToken.lineNumber)
+        assert self.nextToken is None
+        self.nextToken = self.newToken(
+                "number", 
+                self.currentToken.value.lstrip("-"),
+                self.currentToken.lineNumber) 
 
     def parseUnaryMessage(self):
         node = self.parsePrimitiveObject()
@@ -741,8 +759,7 @@ class Parser:
                 if variableNode is None:
                     self.error("variable expected after colon")
                 node.addArgument(variableNode)
-            if self.matches("binary_selector","||"):
-                self.splitDoubleBar()            
+            self.splitDoubleBar()            
             if not self.matches("binary_selector","|"):
                 self.parsingError('"|" expected after block variable list')
             self.stepToken()
@@ -1540,7 +1557,7 @@ class Array(SequenceableCollection):
         
 if __name__ == "__main__":  
     parser = Parser()
-    parser.handler = Handler()
+    parser.handler = BasicHandler()
     parser.processCommandLine()
     
            

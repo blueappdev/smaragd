@@ -29,17 +29,27 @@ TestClass1 >> testExoticVariableNames [
 ]
 
 TestClass1 >> testAssignment [
+    "Test both ANSI assignment and Smalltalk-80 assignment."
     | a |
     a := 1.
     a _ 2.
 ]
 
-TestClass1 class >> testHyphen [
-    | uhu als |
-    uhu := 1 * -5.
-    uhu := 1 - 5.
-    uhu := 1 - 5.
-    uhu := -5.
+TestClass1 class >> testHyphenWithSpaces [
+    | a |
+    a := 1 * -4.
+    a := 2 - 5.
+    a := -6.
+]
+
+TestClass1 class >> testMinusWithoutSpaces [
+    "The minus in '2-5' is a separate token (binary_selector) 
+    and not part of a number literal of -5."
+
+    | a |
+    a := 1*-4.
+    a := 2-5.
+    a := -6.
 ]
 
 TestClass1 class >> testNumberLiterals [
@@ -56,20 +66,18 @@ TestClass1 class >> testNumberLiterals [
 ]
 
 TestClass1 >> testBlock [
-    | a |
-    a := [:value | value.name == nil ]
+    ^[:value | value.name == nil ]
 ]
 
 TestClass1 >> testCurlyBlock [
-    | a |
-    a := {:value | value.name == nil }
+    ^{:value | value.name == nil }
 ]
 
 TestClass1 >> testBlockWithoutSpaceBeforeTemporaries [
-    "No space between the two vertical bars ||. 
+    "No space between the double vertical bar ||. 
     The first vertical is a separate token."
     
-    ^[:value|| result | result := value ]
+    ^[:value || result | result := value ]
 ]
 
 TestClass1 >> testPragma [
@@ -79,7 +87,7 @@ TestClass1 >> testPragma [
 ]
 
 TestClass1 >> testPoorlyNamedTemporaries [
-    | a aValue anInteger someValues temp |
+    | e aValue anInteger someValues tempValue |
     ^nil
 ]
 
