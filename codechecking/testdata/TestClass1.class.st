@@ -20,8 +20,10 @@ TestClass1 >> testRecursion1 [
 ]
 
 TestClass1 >> testRecursion2 [
+    "Recursion without return statement."
+    
     self 
-        testRecursion22;
+        testRecursion2;
         send2
 ]
 

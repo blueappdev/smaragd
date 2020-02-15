@@ -40,7 +40,7 @@ class CodeCheckingHandler(lib.parsing.BasicHandler):
             return
         if node.selector != self.currentMethodSelector:
             return
-        self.methodWarning("Static recursion")
+        self.methodWarning("Recursion")
         
 if __name__ == "__main__":  
     parser = lib.parsing.Parser()
