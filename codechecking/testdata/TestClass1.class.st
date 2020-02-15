@@ -49,11 +49,12 @@ TestClass1 >> testAssignment [
     a _ 2.
 ]
 
-TestClass1 class >> testHyphenWithSpaces [
+TestClass1 class >> testMinusWithSpaces [
     | a |
     a := 1 * -4.
     a := 2 - 5.
     a := -6.
+    self - self size - 1
 ]
 
 TestClass1 class >> testMinusWithoutSpaces [
@@ -64,6 +65,7 @@ TestClass1 class >> testMinusWithoutSpaces [
     a := 1*-4.
     a := 2-5.
     a := -6.
+    self-self size-1
 ]
 
 TestClass1 class >> testNumberLiterals [
@@ -113,3 +115,4 @@ TestClass1 >> testUnusualSenders [
 TestClass1 >> testBinarySelectorInCascade [
     stream <<< 1;  <<<< 2
 ]
+

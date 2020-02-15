@@ -129,12 +129,15 @@ class Token:
 class Parser:
     def __init__(self):
         self.handler = None
+        self.traceFlag = False
     
     def processCommandLine(self):
         try:
             self.basicProcessCommandLine()
         except KeyboardInterrupt:
             sys.stderr.write("\nInterrupted...\n")
+        #except:
+        #    print "Internal error."
     
     def basicProcessCommandLine(self):
         options, arguments = getopt.getopt(sys.argv[1:],"")
@@ -153,6 +156,10 @@ class Parser:
     def error(self, *args):
         print "error:", string.join(map(lambda each: repr(each), args), " ")
         sys.exit(1)
+
+    def trace(self, *args):
+        if self.traceFlag:
+            print "trace:", string.join(map(lambda each: repr(each), args), " ")
         
     def reportTonelError(self, lineNumber, *args):
         print string.join(map(lambda each: str(each), args), " "), "in", os.path.basename(self.currentFilename)+":"+str(lineNumber), "in", os.path.dirname(self.currentFilename)
@@ -440,7 +447,7 @@ class Parser:
         return True
         
     def parseMessagePattern(self):
-        #print "parseMessagePattern"
+        self.trace("parseMessagePattern() - begin")
         if not self.matches("identifier"):
             return False
         methodClass = self.currentToken.value
@@ -566,6 +573,7 @@ class Parser:
             return self.parseCascadeMessage()
 
     def parseCascadeMessage(self):
+        self.trace("parseCascadeMessage() - begin")
         node = self.parseKeywordMessage()
         if not self.matches(";"):
             return node
@@ -585,12 +593,14 @@ class Parser:
         return cascadeNode
 
     def parseKeywordMessage(self):
+        self.trace("parseKeywordMessage()")
         node = self.parseBinaryMessage()
         if not self.matches("keyword"):
             return node
         return self.parseKeywordMessageWith(node)
 
     def parseKeywordMessageWith(self, aNode):
+        self.trace("parseKeywordMessageWith()")
         selector = ''
         arguments = []
         while self.matches("keyword"):
@@ -604,6 +614,7 @@ class Parser:
         return newNode
 
     def parseBinaryMessage(self):
+        self.trace("parseBinaryMessage() - begin")
         node = self.parseUnaryMessage()
         self.splitNegativeNumberLiteral()
         while self.matches("binary_selector"):
@@ -613,26 +624,34 @@ class Parser:
             self.stepToken()
             newNode.arguments = [self.parseUnaryMessage()]
             node = newNode
+            self.splitNegativeNumberLiteral()
+        self.trace("parseBinaryMessage() - end")
         return node
 
     def parseBinaryMessageWith(self, aNode):
+        self.trace("parseBinaryMessageWith() - begin")
         self.splitNegativeNumberLiteral()
         if not self.matches("binary_selector"):
+            self.trace("parseBinaryMessageWith() - none")
             return None
         node = MessageNode()
         node.receiver = aNode
         node.selector = self.currentToken.value
         self.stepToken()
         node.arguments = [self.parseUnaryMessage()]
+        self.trace("parseBinaryMessageWith() - end")
         return node        
         
     def parseUnaryMessage(self):
+        self.trace("parseUnaryMessage() - begin")
         node = self.parsePrimitiveObject()
         while self.matches("identifier"):
             node = self.parseUnaryMessageWith(node)
+        self.trace("parseUnaryMessage() - end")
         return node
 
     def parseUnaryMessageWith(self, aNode):
+        self.trace("parseUnaryMessageWith()i - begin")
         if not self.matches("identifier"):
             return None
         node = MessageNode()
@@ -643,6 +662,7 @@ class Parser:
         # BEGIN OF HACK
         self.handler.addUnaryMessageSend(node.selector)
         # END OF HACK
+        self.trace("parseUnaryMessageWith() - end")
         return node
     
     def splitNegativeNumberLiteral(self):
