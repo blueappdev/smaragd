@@ -1,9 +1,11 @@
+#!/usr/bin/python
+
 import sys, getopt, glob
 import os, os.path, codecs
 import StringIO, string
 from collections import OrderedDict
 
-class Handler:
+class EmptyHandler:
     def setName(self, value):
         pass
     
@@ -42,14 +44,22 @@ class Handler:
 
     def addMethod(self, selector, arguments, methodSide, methodClass):
         pass
-        
+
     def addTemporary(self, name):
         pass
-        
-    def setConstraint(self, name):
+
+    def setConstraints(self, name):
         pass
-        
-class DebugHandler:
+
+class BasicHandler(EmptyHandler):
+    def addMethod(self, selector, arguments, methodSide, methodClass):
+        self.currentMethodSelector = selector
+        self.currentMethodClass = methodClass + ("" if methodSide == "instance" else " " + methodSide)
+
+    def getCurrentMethodSignature(self):
+        return self.currentMethodClass + ">>" + self.currentMethodSelector
+
+class DebugHandler(BasicHandler):
     def setName(self, value):
         print "name:", value
     
@@ -465,26 +475,44 @@ class Parser:
 
     def parseMethodBody(self):
         #print "parseMessageBody() begin"
+        pragmas = self.parsePragmas()
         temporaries = self.parseTemporaries()
-        statements = self.parseStatements()
-        statements.temporaries = temporaries
+        sequence = self.parseStatements()
+        sequence.temporaries = temporaries
         #print "parseMessageBody() return True", self.currentToken
-        return statements
+        return sequence
 
+    def parsePragmas(self):
+        while self.parsePragma():
+            pass
+
+    # no return value yet, should be a PragmaNode
+    def parsePragma(self):
+        #print "parsePragma()", self.currentToken
+        if not self.matches("binary_selector", "<"):
+            return
+        self.stepToken()
+        while self.matches("keyword"):
+            self.stepToken()
+            if not self.parsePrimitiveLiteral():
+                self.parsingError("primitive literal expected")
+        if not self.matches("binary_selector", ">"):
+            self.parsingError("> expected")
+        self.stepToken()
+        
     def parseTemporaries(self):
         temporaries = []
-        if not self.currentToken.matches("binary_selector", "|"):
-            return temporaries
-        self.stepToken()
-        while self.currentToken.matches("identifier"):
-            temporaries.append(VariableNode(self.currentToken.value))
-            # BEGIN OF HACK
-            self.handler.addTemporary(self.currentToken.value)
-            # END OF HACK
+        if self.matches("binary_selector", "|"):
             self.stepToken()
-        if not self.currentToken.matches("binary_selector", "|"):
-            self.error("identifier or | expected in temporaries")
-        self.stepToken()
+            while self.matches("identifier"):
+                temporaries.append(VariableNode(self.currentToken.value))
+                # BEGIN OF HACK
+                self.handler.addTemporary(self.currentToken.value)
+                # END OF HACK
+                self.stepToken()
+            if not self.matches("binary_selector", "|"):
+                self.error("identifier or | expected in temporaries")
+            self.stepToken()
         return temporaries
 
     def parseStatements(self):
@@ -499,7 +527,7 @@ class Parser:
         statement = self.parseStatement()
         while statement is not None:
             aSequenceNode.addStatement(statement)
-            if self.currentToken.matches("."):
+            if self.matches("."):
                 self.stepToken()
                 statement = self.parseStatement()
             else:
@@ -507,7 +535,7 @@ class Parser:
         return aSequenceNode
 
     def parseAssignment(self):
-        if self.currentToken.matches("identifier"):
+        if self.matches("identifier"):
             self.nextToken = self.getToken()
             if self.nextToken.matches("assignment"):
                 node = AssignmentNode()
@@ -542,14 +570,14 @@ class Parser:
 
     def parseKeywordMessage(self):
         node = self.parseBinaryMessage()
-        if not self.currentToken.matches("keyword"):
+        if not self.matches("keyword"):
             return node
         return self.parseKeywordMessageWith(node)
 
     def parseKeywordMessageWith(self, aNode):
         selector = ''
         arguments = []
-        while self.currentToken.matches("keyword"):
+        while self.matches("keyword"):
             selector = selector + self.currentToken.value
             self.stepToken()
             arguments.append(self.parseBinaryMessage())
@@ -561,7 +589,7 @@ class Parser:
 
     def parseBinaryMessage(self):
         node = self.parseUnaryMessage()
-        while self.currentToken.matches("binary_selector"):
+        while self.matches("binary_selector"):
             newNode = MessageNode()
             newNode.receiver = node
             newNode.selector = self.currentToken.value
@@ -596,6 +624,9 @@ class Parser:
         node = self.parseBlock()
         if node is not None:
             return node
+        node = self.parseCurlyBlock()
+        if node is not None:
+            return node
         node = self.parseLiteralArray()
         if node is not None:
             return node
@@ -618,13 +649,11 @@ class Parser:
             return node
         else:
             self.parsingError('"}" expected')
-
-
-
+            
     # GS needs to support byte arrays (without comma) and
     # array builder with comma and expressions.
     def parseByteArrayOrArrayBuilder(self, nested = False):
-        if self.currentToken.matches("bytearray"):
+        if self.matches("bytearray"):
             self.stepToken()
             node = self.parsePrimitiveObject()
             isArrayBuilder = (self.matches("binary_selector", ",") or
@@ -655,7 +684,7 @@ class Parser:
         return None
         
     def parsePrimitiveIdentifier(self):
-        if not self.currentToken.matches("identifier"):
+        if not self.matches("identifier"):
             return None
         node = VariableNode(self.currentToken.value)
         self.stepToken()
@@ -665,26 +694,26 @@ class Parser:
         return self.parsePrimitiveIdentifier()
 
     def parsePrimitiveValueLiteral(self):
-        if self.currentToken.matches("string"):
+        if self.matches("string"):
             node = LiteralValueNode(String(self.currentToken.value))
             self.stepToken()
             return node
-        if self.currentToken.matches("symbol"):
+        if self.matches("symbol"):
             node = LiteralValueNode(Symbol(self.currentToken.value))
             self.stepToken()
             return node
-        if self.currentToken.matches("character"):
+        if self.matches("character"):
             node = LiteralValueNode(Character(self.currentToken.value))
             self.stepToken()
             return node
-        if self.currentToken.matches("qualified_name"):
+        if self.matches("qualified_name"):
             node = LiteralValueNode(String(self.currentToken.value))
             self.stepToken()
             return node
         return None
 
     def parseNumberLiteral(self):
-        if not self.currentToken.matches("number"):
+        if not self.matches("number"):
             return None
         node = LiteralValueNode(Number(self.currentToken.value))
         self.stepToken()
@@ -700,31 +729,67 @@ class Parser:
         return None
 
     def parseBlock(self):
-        if not self.currentToken.matches("["):
+        if not self.matches("["):
             return None
         self.stepToken()
         node = BlockNode()
-        if self.currentToken.matches(":"):
-            while self.currentToken.matches(":"):
+        if self.matches(":"):
+            while self.matches(":"):
                 self.stepToken()
                 variableNode = self.parseVariable()
                 #print "block variable", variableNode
                 if variableNode is None:
                     self.error("variable expected after colon")
                 node.addArgument(variableNode)
-            if not self.currentToken.matches("binary_selector","|"):
+            if self.matches("binary_selector","||"):
+                self.splitDoubleBar()            
+            if not self.matches("binary_selector","|"):
                 self.parsingError('"|" expected after block variable list')
             self.stepToken()
         node.body = self.parseStatements()
         #print self.currentToken
-        if not self.currentToken.matches("]"):
+        if not self.matches("]"):
             self.parsingError('"]" expected at the end of a block')
+        self.stepToken()
+        return node
+        
+    def splitDoubleBar(self):
+        if self.matches("binary_selector","||"):
+            self.currentToken = self.newToken("binary_selector", "|", self.currentToken.lineNumber)
+            assert self.nextToken is None
+            self.nextToken = self.newToken("binary_selector", "|", self.currentToken.lineNumber) 
+
+    def parseCurlyBlock(self):
+        if not self.matches("{"):
+            return None
+        assert self.nextToken is None
+        self.nextToken = self.getToken()
+        if not self.nextToken.matches(":"):
+            return None
+        self.stepToken()
+        node = BlockNode()
+        while self.matches(":"):
+            self.stepToken()
+            variableNode = self.parseVariable()
+            #print "block variable", variableNode
+            if variableNode is None:
+                self.error("variable expected after colon")
+            node.addArgument(variableNode)
+        if self.matches("binary_selector","||"):
+            self.splitDoubleBar()     
+        if not self.matches("binary_selector","|"):
+            self.parsingError('"|" expected after block variable list')
+        self.stepToken()
+        node.body = self.parseStatements()
+        #print self.currentToken
+        if not self.matches("}"):
+            self.parsingError('"}" expected at the end of a curly block')
         self.stepToken()
         return node
 
     def parseLiteralArray(self, nested = False):
         # Special array types, like #[] must be handled in subclasses.
-        if self.currentToken.matches("array") or (nested and self.currentToken.matches("(")):
+        if self.matches("array") or (nested and self.matches("(")):
             newNode = LiteralArrayNode(isForByteArray=False)
             self.stepToken()
             node = self.parseLiteralArrayObject()
@@ -759,11 +824,11 @@ class Parser:
         return None
 
     def parseParenthesizedExpression(self):
-        if not self.currentToken.matches("("):
+        if not self.matches("("):
             return None
         self.stepToken()
         node = self.parseAssignment()
-        if not self.currentToken.matches(")"):
+        if not self.matches(")"):
             self.parsingError('")" expected')
         self.stepToken()
         return node
@@ -799,18 +864,18 @@ class Parser:
         return expression
 
     def parsePrimary(self):
-        if self.currentToken.matches("identifier"):
+        if self.matches("identifier"):
             node = VariableNode(self.currentToken.value)
             self.stepToken()
             return node
-        if self.currentToken.matches("string"):
+        if self.matches("string"):
             node = LiteralNode(self.currentToken.value)
             self.stepToken()
             return node
         return None
 
     def parseMessage(self):
-        if self.currentToken.matches("identifier"):
+        if self.matches("identifier"):
             node = MessageNode()
             node.selector = self.currentToken.value
             self.stepToken()
@@ -936,7 +1001,7 @@ class Parser:
         else:
             self.currentToken = self.nextToken
             self.nextToken = None
-        print "stepToken()", self.currentToken
+        #print "stepToken()", self.currentToken
     
     def newToken(self, type, value, lineNumber):
         return Token(type, value, lineNumber)
