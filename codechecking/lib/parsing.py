@@ -168,8 +168,9 @@ class Parser:
                     
     def error(self, *args):
         print "error:", string.join(map(lambda each: repr(each), args), " ")
+        self.printFilenameAndLocation()
         sys.exit(1)
-
+        
     def trace(self, *args):
         if self.traceFlag:
             print "trace:", string.join(map(lambda each: repr(each), args), " ")
@@ -182,9 +183,12 @@ class Parser:
         if token is None:
             token = self.currentToken
         print aString,  "instead of", token  
-        print os.path.basename(self.currentFilename)+":"+str(self.lineNumber), "in", os.path.dirname(self.currentFilename)+'/'
+        self.printFilenameAndLocation()
         sys.exit(1)
         
+    def printFilenameAndLocation(self):
+        print os.path.basename(self.currentFilename)+":"+str(self.lineNumber), "in", os.path.dirname(self.currentFilename)+'/'
+    
     def matches(self, type, value = None):
         return self.currentToken.matches(type, value)
         
@@ -1005,7 +1009,7 @@ class Parser:
             return ch
         if ch in "+-\\*~<>=|/&@%,?!":
             return "selector_character"
-        if not 32 <= self.ord(ch) <= 127:
+        if not 32 <= self.ord(ch) <= 127 or ch in "`":
             return "exotic_character"
         self.error("unclassified character", ch, repr(self.ord(ch)))
 
