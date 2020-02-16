@@ -137,8 +137,12 @@ class Parser:
             self.basicProcessCommandLine()
         except KeyboardInterrupt:
             sys.stderr.write("\nInterrupted...\n")
-        #except:
-        #    print "Internal error."
+        except:
+            if self.quietFlag:
+                print "Internal error."               
+            else:
+                raise
+                
 
     def usage(self):
         print "code check"
@@ -203,6 +207,7 @@ class Parser:
             self.processFileOrDirectory(os.path.join(fn, each))
             
     def processFile(self, fn):
+        self.trace("PROCESS", fn)
         self.currentFilename = fn
         root, ext = os.path.splitext(fn)
         if ext == ".st":
@@ -997,15 +1002,15 @@ class Parser:
     def classifyCharacter(self, ch):
         if ch == "":
             return "end"
-        if self.isDigit(ch):
+        if ch.isdigit():
             return "digit"
-        if self.isLetter(ch):
+        if ch.isalnum() or ch == "_":
             return "letter"
         if ch in " \n\r\f\t":
             if ch == "\n":
                 self.lineNumber +=  1
             return "white"
-        if ch in "{}:#'\".()^_[]$;":
+        if ch in "{}:#'\".()^[]$;":
             return ch
         if ch in "+-\\*~<>=|/&@%,?!":
             return "selector_character"
@@ -1080,12 +1085,6 @@ class Parser:
     
     def newToken(self, type, value, lineNumber):
         return Token(type, value, lineNumber)
-        
-    def isDigit(self, aCharacter):
-        return "0" <= aCharacter <= "9"
-        
-    def isLetter(self, aCharacter):
-        return "a" <= aCharacter <= "z" or "A" <= aCharacter <= "Z" or aCharacter == "_"
         
     def scanWhite(self):
         if self.currentCharacterClass == "white":
@@ -1204,7 +1203,7 @@ class Parser:
                     else:
                         break
                 if self.currentCharacterClass == "end":
-                    self.error("unterminated string")
+                    self.parsingError("unterminated string")
                 value.write(self.currentCharacter)
                 self.stepCharacter()
             self.stepCharacter()
