@@ -1001,7 +1001,7 @@ class Parser:
             if ch == "\n":
                 self.lineNumber +=  1
             return "white"
-        if ch in "{}:#'\"-.()^_[]$;":
+        if ch in "{}:#'\".()^_[]$;":
             return ch
         if ch in "+-\\*~<>=|/&@%,?!":
             return "selector_character"
@@ -1066,12 +1066,13 @@ class Parser:
             return token
             
     def stepToken(self):
+        self.trace("stepToken() - begin")
         if self.nextToken is None:
             self.currentToken = self.getToken()        
         else:
             self.currentToken = self.nextToken
             self.nextToken = None
-        #print "stepToken()", self.currentToken
+        self.trace("stepToken()", self.currentToken)
     
     def newToken(self, type, value, lineNumber):
         return Token(type, value, lineNumber)
@@ -1138,6 +1139,18 @@ class Parser:
             return token
 
     def scanNumber(self):
+        if self.currentCharacter == "#":
+            if self.nextCharacterClass == "digit":
+                value = StringIO.StringIO()
+                value.write(self.currentCharacter)
+                self.stepCharacter()
+                while self.currentCharacterClass == "digit":
+                    value.write(self.currentCharacter)
+                    self.stepCharacter()
+                return self.newToken("number", value.getvalue(), self.lineNumber)
+            else:
+                return None
+
         if not (self.currentCharacterClass == "digit" or
             (self.currentCharacter == "-" and self.nextCharacterClass == "digit")):
             return None
@@ -1151,7 +1164,7 @@ class Parser:
             value.write(self.currentCharacter)
             self.stepCharacter()
             if self.currentCharacterClass not in ["digit", "letter"]:
-                self.error("invalid radix number")
+                self.parsingError("invalid radix number")
             while self.currentCharacterClass in ["digit", "letter"]:
                 value.write(self.currentCharacter)
                 self.stepCharacter()       
@@ -1231,12 +1244,13 @@ class Parser:
                     return self.newToken("symbol", token.value, self.lineNumber)
             token = self.scanBinarySelector()
             if token is None:
-                self.error("incomplete literal after hash")
+                self.parsingError("incomplete literal after hash")
             return self.newToken("symbol", token.value, self.lineNumber)
         else:
             return None
 
     def scanComment(self):
+        self.trace("scanComment() - begin")
         if self.currentCharacter == "\"":
             lineNumber = self.lineNumber
             value = StringIO.StringIO()
@@ -1252,7 +1266,7 @@ class Parser:
             return None
 
     def scanBinarySelector(self):
-        self.trace("scanBinarySelector() - begin")
+        self.trace("scanBinarySelector() - begin", self.currentCharacterClass, self.currentCharacter)
         if self.currentCharacterClass == "selector_character":
             lineNumber = self.lineNumber
             value = StringIO.StringIO()
@@ -1261,11 +1275,15 @@ class Parser:
             while self.currentCharacterClass == "selector_character":
                 value.write(self.currentCharacter)
                 self.stepCharacter()
-            return self.newToken("binary_selector", value.getvalue(), lineNumber)
+            newToken = self.newToken("binary_selector", value.getvalue(), lineNumber)
+            self.trace("scanBinarySelector() - begin", newToken)
+            return newToken
         else:
+            self.trace("scanBinarySelector() - none")
             return None
 
     def scanSimple(self):
+        self.trace("scanSimple() - begin")
         if self.currentCharacter in "^.()[]{};":
             token = self.newToken(self.currentCharacter, self.currentCharacter, self.lineNumber)
             self.stepCharacter()
@@ -1273,6 +1291,7 @@ class Parser:
         return None
 
     def scanAssignment(self):
+        self.trace("scanAssignment() - begin")
         if self.currentCharacter == "_" and self.nextCharacterClass != "letter":
             self.stepCharacter()
             return self.newToken("assignment", "_", self.lineNumber)

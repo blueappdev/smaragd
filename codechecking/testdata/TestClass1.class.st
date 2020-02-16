@@ -50,10 +50,9 @@ TestClass1 >> testAssignment [
 ]
 
 TestClass1 class >> testMinusWithSpaces [
-    | a |
-    a := 1 * -4.
-    a := 2 - 5.
-    a := -6.
+    a1 := 1 * -4.
+    a2 := 2 - 5.
+    a3 := -6.
     self - self size - 1
 ]
 
@@ -61,10 +60,9 @@ TestClass1 class >> testMinusWithoutSpaces [
     "The minus in '2-5' is a separate token (binary_selector) 
     and not part of a number literal of -5."
 
-    | a |
-    a := 1*-4.
-    a := 2-5.
-    a := -6.
+    b1:=1*-4.
+    b2:=2-5.
+    b3:=-6.
     self-self size-1
 ]
 
