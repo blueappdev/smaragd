@@ -783,10 +783,6 @@ class Parser:
             node = LiteralValueNode(Character(self.currentToken.value))
             self.stepToken()
             return node
-        #if self.matches("qualified_name"):
-        #    node = LiteralValueNode(String(self.currentToken.value))
-        #    self.stepToken()
-        #    return node
         return None
 
     def parseNumberLiteral(self):
@@ -1007,8 +1003,8 @@ class Parser:
             return "white"
         if ch in "{}:#'\"-.()^_[]$;":
             return ch
-        if ch in "+/\\*~<>=@%|&?!,`":
-            return "special_character"
+        if ch in "+-\\*~<>=|/&@%,?!":
+            return "selector_character"
         if not 32 <= self.ord(ch) <= 127:
             return "exotic_character"
         self.error("unclassified character", ch, repr(self.ord(ch)))
@@ -1211,6 +1207,7 @@ class Parser:
             return None
             
     def scanSymbolOrArray(self):
+        self.trace("scanSymbolOrArray() - begin")
         if self.currentCharacter == "#":
             self.stepCharacter()
             self.scanWhite()
@@ -1220,16 +1217,6 @@ class Parser:
             if self.currentCharacter == "[":
                 self.stepCharacter()
                 return self.newToken("bytearray", "#[", self.lineNumber)
-            #if self.currentCharacter == "{":
-            #    self.stepCharacter()
-            #    self.scanWhite()
-            #    identifier = self.scanIdentifier()
-            #    assert identifier is not None
-            #    self.scanWhite()
-            #    if self.currentCharacter != "}":
-            #        self.error("incomplete qualified reference literal")
-            #    self.stepCharacter()
-            #    return self.newToken("qualified_name", identifier.value, self.lineNumber)
             if self.currentCharacterClass == "letter":
                 value = StringIO.StringIO()
                 value.write(self.currentCharacter)
@@ -1265,16 +1252,13 @@ class Parser:
             return None
 
     def scanBinarySelector(self):
-        if self.currentCharacter == "-":
-            lineNumber = self.lineNumber
-            self.stepCharacter()
-            return self.newToken("binary_selector", "-", lineNumber)
-        if self.currentCharacterClass == "special_character":
+        self.trace("scanBinarySelector() - begin")
+        if self.currentCharacterClass == "selector_character":
             lineNumber = self.lineNumber
             value = StringIO.StringIO()
             value.write(self.currentCharacter)
             self.stepCharacter()
-            while self.currentCharacterClass == "special_character":
+            while self.currentCharacterClass == "selector_character":
                 value.write(self.currentCharacter)
                 self.stepCharacter()
             return self.newToken("binary_selector", value.getvalue(), lineNumber)

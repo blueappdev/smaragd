@@ -113,7 +113,10 @@ TestClass1 >> testUnusualSenders [
 ]
 
 TestClass1 >> testBinarySelectorInCascade [
-    stream <<< 1;  <<<< 2
+    1 <<< 2.
+    3 <<< 4; <<<< 5.
+    1 >> 2.
+    6 -> 7.
 ]
 
 TestClass1 >> testComplexExpressions [
@@ -122,5 +125,12 @@ TestClass1 >> testComplexExpressions [
 ]
 
 TestClass1 >> testLiteralArray [
-    ^#('' #hash sym 11 , <<)
+    #('').
+    #('' #hash).
+    #('' #hash $1).
+    #('' #hash $1 sym).
+    #('' #hash $1 sym 11).
+    #('' #hash $1 sym 11 , ).
+    #('' #hash $1 sym 11 , <<).
+    #('' #hash $1 sym 11 , << #(a b c $. true)).
 ]
