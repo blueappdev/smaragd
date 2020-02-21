@@ -45,6 +45,9 @@ class EmptyHandler:
     def addMethod(self, selector, arguments, methodSide, methodClass):
         pass
 
+    def setConstraints(self, name):
+        pass
+
     def addTemporary(self, name):
         # This hack was added as a shortcut.
         pass
@@ -53,7 +56,8 @@ class EmptyHandler:
         # This hack was added as a shortcut.
         pass    
     
-    def setConstraints(self, name):
+    def addBlockParameter(self, name):
+        # This hack was added as a shortcut.
         pass
         
     def addMethodBody(self, node):
@@ -819,7 +823,7 @@ class Parser:
             while self.matches(":"):
                 self.stepToken()
                 variableNode = self.parseVariable()
-                #print "block variable", variableNode
+                self.handler.addBlockParameter(variableNode.name)
                 if variableNode is None:
                     self.error("variable expected after colon")
                 node.addArgument(variableNode)

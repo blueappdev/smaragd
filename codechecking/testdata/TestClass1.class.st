@@ -105,6 +105,11 @@ TestClass1 >> testPoorlyNamedTemporaries [
     ^nil
 ]
 
+TestClass1 >> testPoorlyNamedBlockParameter [
+    self do: [:e | e is bad].
+    self do: [:each | each is good].
+]
+
 TestClass1 >> testUnusualSenders [
    1 self.
    2 nil.

@@ -17,8 +17,6 @@ class CodeCheckingHandler(lib.parsing.BasicHandler):
             self.methodWarning("Poorly named variable", repr(str(name)))
     
     def isPoorlyNamedVariable(self, name):
-        if name == "e":
-            return True
         poorPrefixes = ["a", "an", "some", "temp" ]
         for prefix in poorPrefixes:
             if name.startswith(prefix):
@@ -41,6 +39,10 @@ class CodeCheckingHandler(lib.parsing.BasicHandler):
         if node.selector != self.currentMethodSelector:
             return
         self.methodWarning("Recursion")
+
+    def addBlockParameter(self, name):
+        if name == "e":
+            self.methodWarning("Poorly named block parameter", repr(str(name)))
         
 if __name__ == "__main__":  
     parser = lib.parsing.Parser()
